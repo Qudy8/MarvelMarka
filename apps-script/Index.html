@@ -11,7 +11,8 @@
       <span class="gate-marvel">MARVEL</span>
       <div class="gate-loader"><i></i><i></i><i></i></div>
       <h1>Открываем общую карту</h1>
-      <p>Проверяем Google-аккаунт и загружаем последние изменения.</p>
+      <p id="loadingStatus">Запускаем интерфейс…</p>
+      <small id="loadingVersion" class="loading-version">Диагностика · версия 5</small>
     </div>
   </div>
 
@@ -116,6 +117,27 @@
     </section>
   </div>
 
+  <script>
+    window.__marvelClientLoaded = false;
+    window.__marvelBootFinished = false;
+    window.__marvelDiagnostic = function(message) {
+      var status = document.getElementById("loadingStatus");
+      if (status) status.textContent = message;
+    };
+    window.addEventListener("error", function(event) {
+      window.__marvelDiagnostic("Ошибка интерфейса: " + (event.message || "неизвестная ошибка"));
+    });
+    window.addEventListener("unhandledrejection", function(event) {
+      var reason = event.reason && event.reason.message ? event.reason.message : String(event.reason || "неизвестная ошибка");
+      window.__marvelDiagnostic("Ошибка запуска: " + reason);
+    });
+    window.setTimeout(function() {
+      if (window.__marvelBootFinished) return;
+      window.__marvelDiagnostic(window.__marvelClientLoaded
+        ? "Сервер Google не ответил. Откройте «Выполнения» в Apps Script и обновите страницу."
+        : "Клиентский код не запустился. Сообщите владельцу: версия 5.");
+    }, 12000);
+  </script>
   <?!= include('Client'); ?>
 </body>
 </html>

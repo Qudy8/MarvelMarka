@@ -1,4 +1,6 @@
 <script>
+window.__marvelClientLoaded=true;
+if(window.__marvelDiagnostic)window.__marvelDiagnostic("Проверяем Google-аккаунт…");
 const MOVIES=[
 ["iron-man","Железный человек","Iron Man",2008,1,"61237"],["hulk","Невероятный Халк","The Incredible Hulk",2008,1,"255380"],["iron-man-2","Железный человек 2","Iron Man 2",2010,1,"411924"],["thor","Тор","Thor",2011,1,"258941"],["first-avenger","Первый мститель","Captain America: The First Avenger",2011,1,"160946"],["avengers","Мстители","The Avengers",2012,1,"263531"],
 ["iron-man-3","Железный человек 3","Iron Man 3",2013,2,"462762"],["thor-dark","Тор 2: Царство тьмы","Thor: The Dark World",2013,2,"595938"],["winter-soldier","Первый мститель: Другая война","Captain America: The Winter Soldier",2014,2,"676266"],["guardians","Стражи Галактики","Guardians of the Galaxy",2014,2,"689066"],["ultron","Мстители: Эра Альтрона","Avengers: Age of Ultron",2015,2,"679830"],["ant-man","Человек-муравей","Ant-Man",2015,2,"195496"],
@@ -21,6 +23,7 @@ const escapeHtml=(value)=>String(value??"").replace(/[&<>"]/g,(char)=>({"&":"&am
 
 function gas(functionName,...args){
   return new Promise((resolve,reject)=>{
+    if(functionName==="getBootstrap"&&window.__marvelDiagnostic)window.__marvelDiagnostic("Запрашиваем общую карту у Google…");
     let settled=false;
     const timer=setTimeout(()=>{if(!settled){settled=true;reject(new Error("Google Apps Script не ответил за 20 секунд. Обновите страницу и проверьте разрешения."));}},20000);
     const success=(value)=>{if(settled)return;settled=true;clearTimeout(timer);resolve(value);};
@@ -46,6 +49,7 @@ function fail(error){console.error(error);setSync("error","Ошибка сохр
 async function boot(){
   try{
     const data=await gas("getBootstrap");
+    window.__marvelBootFinished=true;
     $("#loading").hidden=true;
     if(!data.authorized){showDenied(data);return;}
     state.user=data.user;state.access=data.access||[];applyBoard(data.board,false);$("#app").hidden=false;
@@ -53,7 +57,7 @@ async function boot(){
     $("#currentAccount").textContent=`${data.user.name} · ${data.user.email}`;
     $("#ownerControls").hidden=data.user.role!=="owner";$("#memberNote").hidden=data.user.role==="owner";
     renderAccess();renderAll();bindEvents();loadMissingPhotos();loadPosters();setInterval(pollBoard,6000);
-  }catch(error){$("#loading").hidden=true;showDenied({reason:error.message});}
+  }catch(error){window.__marvelBootFinished=true;$("#loading").hidden=true;showDenied({reason:error.message});}
 }
 function showDenied(data){$("#denied").hidden=false;$("#deniedReason").textContent=data.reason||"Вашего аккаунта нет в списке доступа.";$("#deniedEmail").textContent=data.email||"Войдите в Google-аккаунт";$("#deniedEmail").hidden=!data.email;}
 function applyBoard(board,announce){state.revision=Number(board.revision)||1;state.watched=Array.isArray(board.watched)?board.watched:[];state.items=Array.isArray(board.items)?board.items:[];if(announce)toast(`Карта обновлена: ${board.updatedBy||"другой участник"}`);renderMovies();renderItems();updateProgress();loadMissingPhotos();}
