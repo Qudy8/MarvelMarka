@@ -19,15 +19,26 @@ window.google = { script: { run: new Proxy({}, {
     if (key === "withSuccessHandler") return (handler) => { target.success = handler; return window.google.script.run; };
     if (key === "withFailureHandler") return (handler) => { target.failure = handler; return window.google.script.run; };
     return (...args) => {
+      if (key === "mutateBoard" && args[0]) {
+        const request = args[0];
+        if (request.action === "upsertItem") {
+          const index = previewBoard.items.findIndex((item) => item.id === request.item.id);
+          if (index >= 0) previewBoard.items[index] = { ...previewBoard.items[index], ...request.item };
+          else previewBoard.items.push(request.item);
+        }
+      }
+      const uploadedItem = key === "uploadPhoto" && args[0] ? { ...args[0].item, fileId: "preview-photo", mimeType: args[0].mimeType } : null;
       const responses = {
         getBootstrap: { authorized: true, user: { email: "owner@gmail.com", name: "Владелец", role: "owner" }, board: previewBoard, access: previewAccess },
         loadBoardSnapshot: { unchanged: true, revision: previewBoard.revision },
-        mutateBoard: { revision: ++previewBoard.revision, updatedAt: new Date().toISOString(), updatedBy: "owner@gmail.com" },
+        mutateBoard: { revision: previewBoard.revision + 1, updatedAt: new Date().toISOString(), updatedBy: "owner@gmail.com" },
+        uploadPhoto: { item: uploadedItem, revision: previewBoard.revision + 1, updatedAt: new Date().toISOString(), updatedBy: "owner@gmail.com" },
         addAuthorizedUser: previewAccess,
         removeAuthorizedUser: previewAccess,
         getProjectLinks: { spreadsheetUrl: "https://docs.google.com/spreadsheets/" },
         loadPhotos: []
       };
+      if (key === "mutateBoard" || key === "uploadPhoto") previewBoard.revision += 1;
       setTimeout(() => target.success && target.success(responses[key]), 80);
     };
   }
