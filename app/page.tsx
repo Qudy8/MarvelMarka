@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-type Tool = "select" | "text" | "arrow" | "image";
+type Tool = "select" | "text" | "image";
 type PhaseId = 1 | 2 | 3 | 4 | 5 | 6;
 
 type Movie = {
@@ -23,15 +23,7 @@ type BoardItem = {
   height: number;
   content: string;
   color: string;
-};
-
-type BoardArrow = {
-  id: string;
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
-  color: string;
+  aspectRatio?: number;
 };
 
 type ViewState = { x: number; y: number; scale: number };
@@ -132,8 +124,18 @@ const WORLD_WIDTH = 11000;
 const WORLD_HEIGHT = 2500;
 const TIMELINE_Y = 980;
 const MAX_VIEW_X = 0;
+const PHOTO_FRAME_WIDTH = 16;
+const PHOTO_FRAME_HEIGHT = 34;
+const PHOTO_LONG_EDGE = 340;
 
 const clampViewX = (x: number) => Math.min(MAX_VIEW_X, x);
+
+const getPhotoFrameSize = (aspectRatio: number, longEdge = PHOTO_LONG_EDGE) => {
+  const isLandscape = aspectRatio >= 1;
+  const contentWidth = isLandscape ? longEdge : longEdge * aspectRatio;
+  const contentHeight = isLandscape ? longEdge / aspectRatio : longEdge;
+  return { width: contentWidth + PHOTO_FRAME_WIDTH, height: contentHeight + PHOTO_FRAME_HEIGHT };
+};
 
 const getMovieX = (index: number) => 520 + index * 266;
 const getMovieY = (index: number) => (index % 2 === 0 ? 500 : 1110);
@@ -193,15 +195,14 @@ export default function Home() {
     originY: number;
     originWidth?: number;
     originHeight?: number;
+    aspectRatio?: number;
   }>(null);
   const suppressPosterClickRef = useRef(false);
   const [tool, setTool] = useState<Tool>("select");
   const [view, setView] = useState<ViewState>({ x: 0, y: -250, scale: 0.72 });
   const [items, setItems] = useState<BoardItem[]>([]);
-  const [arrows, setArrows] = useState<BoardArrow[]>([]);
   const [watched, setWatched] = useState<string[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
-  const [arrowStart, setArrowStart] = useState<{ x: number; y: number } | null>(null);
   const [query, setQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -214,7 +215,6 @@ export default function Home() {
       if (saved) {
         const data = JSON.parse(saved);
         setItems(Array.isArray(data.items) ? data.items : []);
-        setArrows(Array.isArray(data.arrows) ? data.arrows : []);
         setWatched(Array.isArray(data.watched) ? data.watched : []);
       }
     } catch {
@@ -225,8 +225,30 @@ export default function Home() {
 
   useEffect(() => {
     if (!hydrated) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ items, arrows, watched }));
-  }, [items, arrows, watched, hydrated]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ items, watched }));
+  }, [items, watched, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    let live = true;
+    items.filter((item) => item.type === "image" && !item.aspectRatio).forEach((item) => {
+      const image = new Image();
+      image.onload = () => {
+        const aspectRatio = image.naturalWidth / image.naturalHeight;
+        if (!live || !Number.isFinite(aspectRatio) || aspectRatio <= 0) return;
+        setItems((current) => {
+          if (!current.some((entry) => entry.id === item.id && !entry.aspectRatio)) return current;
+          return current.map((entry) => {
+            if (entry.id !== item.id) return entry;
+            const longEdge = Math.max(entry.width - PHOTO_FRAME_WIDTH, entry.height - PHOTO_FRAME_HEIGHT, 1);
+            return { ...entry, ...getPhotoFrameSize(aspectRatio, longEdge), aspectRatio };
+          });
+        });
+      };
+      image.src = item.content;
+    });
+    return () => { live = false; };
+  }, [hydrated, items]);
 
   useEffect(() => {
     if (!toast) return;
@@ -273,7 +295,6 @@ export default function Home() {
       addText();
       return;
     }
-    setArrowStart(null);
     setTool(next);
   };
 
@@ -287,14 +308,22 @@ export default function Home() {
     }
     const reader = new FileReader();
     reader.onload = () => {
-      const point = centerPoint();
-      const next: BoardItem = {
-        id: uid("image"), type: "image", x: point.x - 170, y: point.y - 120,
-        width: 340, height: 240, content: String(reader.result), color: "#ffffff",
+      const content = String(reader.result);
+      const image = new Image();
+      image.onload = () => {
+        const aspectRatio = image.naturalWidth / image.naturalHeight;
+        const { width, height } = getPhotoFrameSize(aspectRatio);
+        const point = centerPoint();
+        const next: BoardItem = {
+          id: uid("image"), type: "image", x: point.x - width / 2, y: point.y - height / 2,
+          width, height, content, color: "#ffffff", aspectRatio,
+        };
+        setItems((current) => [...current, next]);
+        setSelected(next.id);
+        setToast("Фото добавлено в исходных пропорциях");
       };
-      setItems((current) => [...current, next]);
-      setSelected(next.id);
-      setToast("Фото добавлено на карту");
+      image.onerror = () => setToast("Не удалось прочитать изображение");
+      image.src = content;
     };
     reader.readAsDataURL(file);
   };
@@ -304,19 +333,6 @@ export default function Home() {
     const target = event.target as HTMLElement;
     if (target.closest(".watched-control, .board-item, textarea, input, button")) return;
     setSelected(null);
-    if (tool === "arrow") {
-      const point = screenToWorld(event.clientX, event.clientY);
-      if (!arrowStart) {
-        setArrowStart(point);
-        setToast("Теперь укажите конец стрелки");
-      } else {
-        setArrows((current) => [...current, { id: uid("arrow"), x1: arrowStart.x, y1: arrowStart.y, x2: point.x, y2: point.y, color: "#ff5d66" }]);
-        setArrowStart(null);
-        setTool("select");
-        setToast("Стрелка добавлена");
-      }
-      return;
-    }
     suppressPosterClickRef.current = false;
     dragRef.current = {
       kind: "pan", pointerId: event.pointerId, moved: false,
@@ -348,7 +364,10 @@ export default function Home() {
       const ratio = startHeight / startWidth;
       const dominantDelta = Math.abs(dx) >= Math.abs(dy) ? dx : dy / ratio;
       const width = Math.min(1200, Math.max(120, startWidth + dominantDelta));
-      setItems((current) => current.map((item) => item.id === drag.id ? { ...item, width, height: width * ratio } : item));
+      const height = drag.aspectRatio
+        ? (width - PHOTO_FRAME_WIDTH) / drag.aspectRatio + PHOTO_FRAME_HEIGHT
+        : width * ratio;
+      setItems((current) => current.map((item) => item.id === drag.id ? { ...item, width, height } : item));
       return;
     }
     setItems((current) => current.map((item) => item.id === drag.id ? { ...item, x: drag.originX + dx, y: drag.originY + dy } : item));
@@ -384,6 +403,7 @@ export default function Home() {
       startX: event.clientX, startY: event.clientY,
       originX: item.x, originY: item.y,
       originWidth: item.width, originHeight: item.height,
+      aspectRatio: item.aspectRatio,
     };
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
   };
@@ -395,7 +415,6 @@ export default function Home() {
   const deleteSelected = useCallback(() => {
     if (!selected) return;
     setItems((current) => current.filter((item) => item.id !== selected));
-    setArrows((current) => current.filter((arrow) => arrow.id !== selected));
     setSelected(null);
     setToast("Объект удалён");
   }, [selected]);
@@ -405,7 +424,7 @@ export default function Home() {
       const target = event.target as HTMLElement;
       if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
       if (event.key === "Delete" || event.key === "Backspace") deleteSelected();
-      if (event.key === "Escape") { setArrowStart(null); setTool("select"); setSelected(null); }
+      if (event.key === "Escape") { setTool("select"); setSelected(null); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -426,11 +445,11 @@ export default function Home() {
   };
 
   const resetBoard = () => {
-    if (items.length || arrows.length || watched.length) {
-      const accepted = window.confirm("Удалить все ваши фото, заметки и стрелки с этой карты?");
+    if (items.length || watched.length) {
+      const accepted = window.confirm("Удалить все ваши фото, заметки и отметки о просмотре с этой карты?");
       if (!accepted) return;
     }
-    setItems([]); setArrows([]); setWatched([]); setSelected(null); setView({ x: 0, y: -250, scale: 0.72 });
+    setItems([]); setWatched([]); setSelected(null); setView({ x: 0, y: -250, scale: 0.72 });
     setToast("Карта возвращена к началу");
   };
 
@@ -481,7 +500,6 @@ export default function Home() {
         <ToolButton active={tool === "select"} icon="↖" label="Выбор" shortcut="V" onClick={() => chooseTool("select")} />
         <span className="tool-separator" />
         <ToolButton active={false} icon="T" label="Текст" shortcut="T" onClick={() => chooseTool("text")} />
-        <ToolButton active={tool === "arrow"} icon="↗" label="Стрелка" shortcut="A" onClick={() => chooseTool("arrow")} />
         <ToolButton active={false} icon="▧" label="Фото" shortcut="I" onClick={() => chooseTool("image")} />
         <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleImage} />
       </aside>
@@ -571,24 +589,6 @@ export default function Home() {
             );
           })}
 
-          <svg className="arrow-layer" width={WORLD_WIDTH} height={WORLD_HEIGHT} aria-hidden="true">
-            <defs>
-              <marker id="arrow-head" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto" markerUnits="strokeWidth">
-                <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
-              </marker>
-            </defs>
-            {arrows.map((arrow) => (
-              <line
-                key={arrow.id}
-                x1={arrow.x1} y1={arrow.y1} x2={arrow.x2} y2={arrow.y2}
-                stroke={arrow.color} strokeWidth="5" markerEnd="url(#arrow-head)"
-                className={selected === arrow.id ? "selected-arrow" : ""}
-                onPointerDown={(event) => { event.stopPropagation(); setSelected(arrow.id); }}
-              />
-            ))}
-            {arrowStart && <circle cx={arrowStart.x} cy={arrowStart.y} r="10" fill="#ff5d66" />}
-          </svg>
-
           {items.map((item) => (
             <div
               key={item.id}
@@ -645,7 +645,7 @@ export default function Home() {
             <h2 id="help-title">Ваша карта киновселенной</h2>
             <div className="help-grid">
               <div><b>01</b><h3>Исследуйте</h3><p>Тяните пустое пространство, а колесом масштабируйте карту относительно курсора. Фазы идут слева направо.</p></div>
-              <div><b>02</b><h3>Дополняйте</h3><p>Добавляйте фото, заметки и стрелки. Выбранное фото можно увеличить, уменьшить или удалить.</p></div>
+              <div><b>02</b><h3>Дополняйте</h3><p>Добавляйте фото и заметки. Фото сохраняет исходные пропорции при загрузке и изменении размера.</p></div>
               <div><b>03</b><h3>Открывайте</h3><p>Нажмите на постер — страница фильма на SSpoisk откроется в новой вкладке.</p></div>
             </div>
             <button className="primary-button" onClick={() => setHelpOpen(false)}>Начать путешествие</button>
