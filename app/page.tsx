@@ -199,7 +199,6 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [helpOpen, setHelpOpen] = useState(false);
-  const [activeMovie, setActiveMovie] = useState<Movie | null>(null);
   const [toast, setToast] = useState("Карта готова к исследованию");
   const [hydrated, setHydrated] = useState(false);
 
@@ -512,20 +511,33 @@ export default function Home() {
                 <span className="connector" />
                 <span className="timeline-dot"><i /></span>
                 <div className="movie-order">{String(index + 1).padStart(2, "0")}</div>
-                <button className="poster-link" onClick={() => setActiveMovie(movie)} aria-label={`Открыть фильм «${movie.title}»`}>
-                  <Poster movie={movie} />
-                  <span className="play-orbit"><b>▶</b></span>
-                </button>
+                <div className="poster-shell">
+                  <a
+                    className="poster-link"
+                    href={playerLink(movie)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onPointerDown={(event) => event.stopPropagation()}
+                    aria-label={`Открыть фильм «${movie.title}» на Marvel Group`}
+                  >
+                    <Poster movie={movie} />
+                    <span className="play-orbit"><b>▶</b></span>
+                  </a>
+                  <label
+                    className="watched-control"
+                    title={isWatched ? "Отмечено как просмотренное" : "Отметить как просмотренное"}
+                    onPointerDown={(event) => event.stopPropagation()}
+                  >
+                    <input type="checkbox" checked={isWatched} onChange={() => toggleWatched(movie.id)} />
+                    <i aria-hidden="true">✓</i>
+                    <span>{isWatched ? "Просмотрено" : "Отметить просмотренным"}</span>
+                  </label>
+                </div>
                 <div className="movie-copy">
                   <span>{movie.year} · {phase.label}</span>
                   <h3>{movie.title}</h3>
                   <p>{movie.original}</p>
                 </div>
-                <label className="watched-control" onPointerDown={(event) => event.stopPropagation()}>
-                  <input type="checkbox" checked={isWatched} onChange={() => toggleWatched(movie.id)} />
-                  <i aria-hidden="true">✓</i>
-                  <span>{isWatched ? "Просмотрено" : "Отметить просмотренным"}</span>
-                </label>
               </article>
             );
           })}
@@ -595,28 +607,6 @@ export default function Home() {
       </div>
 
       {toast && <div className="toast" role="status">{toast}</div>}
-
-      {activeMovie && (
-        <div className="modal-backdrop" onPointerDown={() => setActiveMovie(null)}>
-          <section className="movie-modal" role="dialog" aria-modal="true" aria-labelledby="movie-modal-title" onPointerDown={(event) => event.stopPropagation()}>
-            <button className="modal-close" onClick={() => setActiveMovie(null)} aria-label="Закрыть">×</button>
-            <div className="movie-modal-poster"><Poster movie={activeMovie} /></div>
-            <div className="movie-modal-copy">
-              <span className="modal-kicker">{activeMovie.year} · ФАЗА {activeMovie.phase}</span>
-              <h2 id="movie-modal-title">{activeMovie.title}</h2>
-              <p>{activeMovie.original}</p>
-              <div className="source-note">
-                <b>Внешний источник</b>
-                <span>Marvel Group иногда отвечает ошибкой HTTP2. Это состояние их сервера и не зависит от хостинга этой карты.</span>
-              </div>
-              <div className="movie-modal-actions">
-                <a className="primary-button" href={playerLink(activeMovie)} target="_blank" rel="noopener noreferrer">Открыть Marvel Group ↗</a>
-                <a className="secondary-button" href={`https://www.justwatch.com/ru/поиск?q=${encodeURIComponent(activeMovie.title)}`} target="_blank" rel="noopener noreferrer">Найти легальный просмотр</a>
-              </div>
-            </div>
-          </section>
-        </div>
-      )}
 
       {helpOpen && (
         <div className="modal-backdrop" onPointerDown={() => setHelpOpen(false)}>
