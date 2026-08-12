@@ -37,7 +37,9 @@ window.google = { script: { run: new Proxy({}, {
 async function render() {
   let html = await readFile(path.join(root, "Index.html"), "utf8");
   const styles = await readFile(path.join(root, "Styles.html"), "utf8");
-  const client = await readFile(path.join(root, "Client.html"), "utf8");
+  const client = (await readFile(path.join(root, "Client.html"), "utf8"))
+    .replace(/^\s*<script(?:\s[^>]*)?>\s*/i, "")
+    .replace(/\s*<\/script>\s*$/i, "");
   html = html.replace("<?!= include('Styles'); ?>", styles);
   html = html.replace("<?!= include('Client'); ?>", mock + client);
   return html;

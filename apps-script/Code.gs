@@ -17,7 +17,13 @@ function doGet() {
 }
 
 function include(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+  const content = HtmlService.createHtmlOutputFromFile(filename).getContent();
+  if (filename === "Client") {
+    return content
+      .replace(/^\s*<script(?:\s[^>]*)?>\s*/i, "")
+      .replace(/\s*<\/script>\s*$/i, "");
+  }
+  return content;
 }
 
 /**
