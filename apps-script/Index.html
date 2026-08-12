@@ -12,7 +12,7 @@
       <div class="gate-loader"><i></i><i></i><i></i></div>
       <h1>Открываем общую карту</h1>
       <p id="loadingStatus">Запускаем интерфейс…</p>
-      <small id="loadingVersion" class="loading-version">Диагностика · версия 9</small>
+      <small id="loadingVersion" class="loading-version">Диагностика · версия 10</small>
     </div>
   </div>
 
@@ -136,9 +136,9 @@
       if (window.__marvelBootFinished) return;
       window.__marvelDiagnostic(window.__marvelClientLoaded
         ? "Сервер Google не ответил. Откройте «Выполнения» в Apps Script и обновите страницу."
-        : "Клиентский код не запустился. Сообщите владельцу: версия 9.");
+        : "Клиентский код не запустился. Сообщите владельцу: версия 10.");
     }, 12000);
   </script>
-  <script src="<?!= clientScriptUrl(); ?>"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Qudy8/MarvelMarka@master/public/apps-script-client.js?v=10"></script>
 </body>
 </html>

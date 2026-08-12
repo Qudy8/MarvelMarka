@@ -37,12 +37,10 @@ window.google = { script: { run: new Proxy({}, {
 async function render() {
   let html = await readFile(path.join(root, "Index.html"), "utf8");
   const styles = await readFile(path.join(root, "Styles.html"), "utf8");
-  const client = (await readFile(path.join(root, "Client.html"), "utf8"))
-    .replace(/^\s*<script(?:\s[^>]*)?>\s*/i, "")
-    .replace(/\s*<\/script>\s*$/i, "");
+  const client = await readFile(path.resolve(root, "..", "public", "apps-script-client.js"), "utf8");
   html = html.replace("<?!= include('Styles'); ?>", styles);
   html = html.replace(
-    '<script src="<?!= clientScriptUrl(); ?>"></script>',
+    '<script src="https://cdn.jsdelivr.net/gh/Qudy8/MarvelMarka@master/public/apps-script-client.js?v=10"></script>',
     `<script>${mock}${client}</script>`
   );
   return html;

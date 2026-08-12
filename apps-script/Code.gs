@@ -9,11 +9,7 @@ const APP = Object.freeze({
   maxPhotoBytes: 2500000,
 });
 
-function doGet(event) {
-  if (event && event.parameter && event.parameter.asset === "client") {
-    return ContentService.createTextOutput(getClientSource_())
-      .setMimeType(ContentService.MimeType.JAVASCRIPT);
-  }
+function doGet() {
   return HtmlService.createTemplateFromFile("Index")
     .evaluate()
     .setTitle("Marvel Timeline Board")
@@ -22,16 +18,6 @@ function doGet(event) {
 
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
-}
-
-function getClientSource_() {
-  return HtmlService.createHtmlOutputFromFile("Client").getContent()
-    .replace(/^\s*<script(?:\s[^>]*)?>\s*/i, "")
-    .replace(/\s*<\/script>\s*$/i, "");
-}
-
-function clientScriptUrl() {
-  return ScriptApp.getService().getUrl() + "?asset=client&v=9";
 }
 
 /**

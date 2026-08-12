@@ -1,4 +1,3 @@
-<script>
 window.__marvelClientLoaded=true;
 if(window.__marvelDiagnostic)window.__marvelDiagnostic("Проверяем Google-аккаунт…");
 const MOVIES=[
@@ -129,4 +128,3 @@ async function openSheet(){try{const links=await gas("getProjectLinks");window.o
 async function resetBoard(){if(!confirm("Удалить общие фото, заметки и все отметки о просмотре?"))return;state.items=[];state.watched=[];renderItems();renderMovies();updateProgress();await saveMutation({action:"reset"},"reset");toast("Общая карта очищена");}
 
 boot();
-</script>

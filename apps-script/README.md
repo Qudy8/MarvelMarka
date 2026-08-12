@@ -19,8 +19,9 @@
    - `Code.gs`
    - `Index.html`
    - `Styles.html`
-   - `Client.html`
 4. В настройках проекта включите показ файла манифеста и замените `appsscript.json`.
+
+Клиентский JavaScript хранится в `public/apps-script-client.js` и подключается через CDN, чтобы HTML-сервис Google не изменял его содержимое.
 
 ### 2. Создайте общую таблицу и папку
 
