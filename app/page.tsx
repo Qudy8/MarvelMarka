@@ -86,45 +86,45 @@ const PHASES: Array<{ id: PhaseId; label: string; years: string; color: string }
   { id: 6, label: "Фаза VI", years: "2025—", color: "#f278ff" },
 ];
 
-const PLAYER_SLUGS: Record<string, string> = {
-  "iron-man": "zheleznyj-chelovek",
-  "hulk": "neveroyatnyj-halk",
-  "iron-man-2": "zheleznyj-chelovek-2",
-  "thor": "tor",
-  "first-avenger": "pervyj-mstitel",
-  "avengers": "mstiteli",
-  "iron-man-3": "zheleznyj-chelovek-3",
-  "thor-dark": "tor-2-carstvo-tmy",
-  "winter-soldier": "pervyj-mstitel-drugaya-vojna",
-  "guardians": "strazhi-galaktiki",
-  "ultron": "mstiteli-era-altrona",
-  "ant-man": "chelovek-muravej",
-  "civil-war": "pervyj-mstitel-protivostoyanie",
-  "doctor-strange": "doktor-strendzh",
-  "guardians-2": "strazhi-galaktiki-chast-2",
-  "homecoming": "chelovek-pauk-vozvrashhenie-domoj",
-  "ragnarok": "tor-ragnaryok",
-  "black-panther": "chyornaya-pantera",
-  "infinity-war": "mstiteli-vojna-beskonechnosti",
-  "ant-man-wasp": "chelovek-muravej-i-osa",
-  "captain-marvel": "kapitan-marvel",
-  "endgame": "mstiteli-final",
-  "far-from-home": "chelovek-pauk-vdali-ot-doma",
-  "black-widow": "chyornaya-vdova",
-  "shang-chi": "shan-chi-i-legenda-desyati-kolec",
-  "eternals": "vechnye",
-  "no-way-home": "chelovek-pauk-net-puti-domoj",
-  "multiverse-madness": "doktor-strendzh-v-multivselennoj-bezumiya",
-  "love-thunder": "tor-lyubov-i-grom",
-  "wakanda": "chyornaya-pantera-vakanda-navsegda",
-  "quantumania": "chelovek-muravej-i-osa-kvantomaniya",
-  "guardians-3": "strazhi-galaktiki-chast-3",
-  "marvels": "kapitan-marvel-2",
-  "deadpool-wolverine": "dedpul-i-rosomaha",
-  "brave-new-world": "kapitan-amerika-novyj-mir",
-  "thunderbolts": "gromoverzhcy",
-  "fantastic-four": "fantasticheskaya-chetvyorka-pervye-shagi",
-  "spider-man-new-day": "chelovek-pauk-sovershenno-novyj-den",
+const KINOPOISK_IDS: Record<string, string> = {
+  "iron-man": "61237",
+  "hulk": "255380",
+  "iron-man-2": "411924",
+  "thor": "258941",
+  "first-avenger": "160946",
+  "avengers": "263531",
+  "iron-man-3": "462762",
+  "thor-dark": "595938",
+  "winter-soldier": "676266",
+  "guardians": "689066",
+  "ultron": "679830",
+  "ant-man": "195496",
+  "civil-war": "822708",
+  "doctor-strange": "409600",
+  "guardians-2": "841263",
+  "homecoming": "690593",
+  "ragnarok": "822709",
+  "black-panther": "623250",
+  "infinity-war": "843649",
+  "ant-man-wasp": "935940",
+  "captain-marvel": "843859",
+  "endgame": "843650",
+  "far-from-home": "1008445",
+  "black-widow": "823956",
+  "shang-chi": "1219149",
+  "eternals": "1198811",
+  "no-way-home": "1309570",
+  "multiverse-madness": "1219909",
+  "love-thunder": "1282688",
+  "wakanda": "1199773",
+  "quantumania": "1318868",
+  "guardians-3": "1044280",
+  "marvels": "1287544",
+  "deadpool-wolverine": "1008444",
+  "brave-new-world": "4443920",
+  "thunderbolts": "5001443",
+  "fantastic-four": "1287545",
+  "spider-man-new-day": "5494049",
 };
 
 const STORAGE_KEY = "marvel-timeline-board-v1";
@@ -139,8 +139,8 @@ function uid(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function playerLink(movie: Movie) {
-  return `https://marvel-group.ru/${PLAYER_SLUGS[movie.id] ?? movie.id}/`;
+function movieLink(movie: Movie) {
+  return `https://www.kinopoisk.ru/film/${KINOPOISK_IDS[movie.id]}/`;
 }
 
 function Poster({ movie }: { movie: Movie }) {
@@ -477,7 +477,7 @@ export default function Home() {
           <div className="world-heading">
             <span>АРХИВ · ЗЕМЛЯ—616</span>
             <h2>Сага разворачивается<br />слева направо.</h2>
-            <p>Перетаскивайте пространство. Нажмите на постер, чтобы перейти к просмотру.</p>
+            <p>Перетаскивайте пространство. Нажмите на постер, чтобы открыть фильм на Кинопоиске.</p>
           </div>
 
           <div className="timeline-line" style={{ top: TIMELINE_Y }} />
@@ -514,11 +514,11 @@ export default function Home() {
                 <div className="poster-shell">
                   <a
                     className="poster-link"
-                    href={playerLink(movie)}
+                    href={movieLink(movie)}
                     target="_blank"
                     rel="noopener noreferrer"
                     onPointerDown={(event) => event.stopPropagation()}
-                    aria-label={`Открыть фильм «${movie.title}» на Marvel Group`}
+                    aria-label={`Открыть страницу фильма «${movie.title}» на Кинопоиске`}
                   >
                     <Poster movie={movie} />
                     <span className="play-orbit"><b>▶</b></span>
@@ -617,7 +617,7 @@ export default function Home() {
             <div className="help-grid">
               <div><b>01</b><h3>Исследуйте</h3><p>Тяните пустое пространство, а колесом масштабируйте карту относительно курсора. Фазы идут слева направо.</p></div>
               <div><b>02</b><h3>Дополняйте</h3><p>Добавляйте фото, заметки и стрелки. Выбранное фото можно увеличить, уменьшить или удалить.</p></div>
-              <div><b>03</b><h3>Смотрите</h3><p>Нажмите на постер — фильм откроется на внешнем сайте в новой вкладке.</p></div>
+              <div><b>03</b><h3>Открывайте</h3><p>Нажмите на постер — страница фильма на Кинопоиске откроется в новой вкладке.</p></div>
             </div>
             <button className="primary-button" onClick={() => setHelpOpen(false)}>Начать путешествие</button>
           </section>
