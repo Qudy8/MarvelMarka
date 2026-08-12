@@ -51,7 +51,7 @@ async function render() {
   const client = await readFile(path.resolve(root, "..", "public", "apps-script-client.js"), "utf8");
   html = html.replace("<?!= include('Styles'); ?>", styles);
   html = html.replace(
-    '<script src="https://cdn.jsdelivr.net/gh/Qudy8/MarvelMarka@dba5cfcf2ffbb333cfe851b2e991cc3d9d94d8c3/public/apps-script-client.js"></script>',
+    '<script src="https://cdn.jsdelivr.net/gh/Qudy8/MarvelMarka@037a803/public/apps-script-client.js"></script>',
     `<script>${mock}${client}</script>`
   );
   return html;
