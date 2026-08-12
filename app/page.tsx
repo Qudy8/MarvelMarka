@@ -199,6 +199,7 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [activeMovie, setActiveMovie] = useState<Movie | null>(null);
   const [toast, setToast] = useState("Карта готова к исследованию");
   const [hydrated, setHydrated] = useState(false);
 
@@ -338,17 +339,13 @@ export default function Home() {
 
   const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
     event.preventDefault();
-    if (event.ctrlKey || event.metaKey) {
-      const rect = event.currentTarget.getBoundingClientRect();
-      const mouseX = event.clientX - rect.left;
-      const mouseY = event.clientY - rect.top;
-      const nextScale = Math.min(1.45, Math.max(0.28, view.scale * (event.deltaY > 0 ? 0.9 : 1.1)));
-      const worldX = (mouseX - view.x) / view.scale;
-      const worldY = (mouseY - view.y) / view.scale;
-      setView({ x: mouseX - worldX * nextScale, y: mouseY - worldY * nextScale, scale: nextScale });
-    } else {
-      setView((current) => ({ ...current, x: current.x - event.deltaX, y: current.y - event.deltaY }));
-    }
+    const rect = event.currentTarget.getBoundingClientRect();
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+    const nextScale = Math.min(1.45, Math.max(0.28, view.scale * Math.exp(-event.deltaY * 0.0018)));
+    const worldX = (mouseX - view.x) / view.scale;
+    const worldY = (mouseY - view.y) / view.scale;
+    setView({ x: mouseX - worldX * nextScale, y: mouseY - worldY * nextScale, scale: nextScale });
   };
 
   const startItemDrag = (event: React.PointerEvent, item: BoardItem) => {
@@ -515,10 +512,10 @@ export default function Home() {
                 <span className="connector" />
                 <span className="timeline-dot"><i /></span>
                 <div className="movie-order">{String(index + 1).padStart(2, "0")}</div>
-                <a className="poster-link" href={playerLink(movie)} target="_blank" rel="noopener noreferrer" aria-label={`Открыть фильм «${movie.title}»`}>
+                <button className="poster-link" onClick={() => setActiveMovie(movie)} aria-label={`Открыть фильм «${movie.title}»`}>
                   <Poster movie={movie} />
                   <span className="play-orbit"><b>▶</b></span>
-                </a>
+                </button>
                 <div className="movie-copy">
                   <span>{movie.year} · {phase.label}</span>
                   <h3>{movie.title}</h3>
@@ -570,7 +567,7 @@ export default function Home() {
                   onChange={(event) => setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, content: event.target.value } : entry))}
                 />
               )}
-              {selected === item.id && <button className="item-delete" onClick={(event) => { event.stopPropagation(); deleteSelected(); }} aria-label="Удалить объект">×</button>}
+              {selected === item.id && <button className="item-delete" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); deleteSelected(); }} aria-label="Удалить объект">×</button>}
               {selected === item.id && item.type === "image" && (
                 <button
                   className="resize-handle"
@@ -594,10 +591,32 @@ export default function Home() {
       <div className="board-status">
         <span className="live-dot" />
         <span>{hydrated ? "Сохраняется на этом устройстве" : "Загрузка карты…"}</span>
-        <kbd>Ctrl</kbd><span>+</span><kbd>колесо</kbd><span>масштаб</span>
+        <kbd>колесо</kbd><span>масштаб под курсором</span>
       </div>
 
       {toast && <div className="toast" role="status">{toast}</div>}
+
+      {activeMovie && (
+        <div className="modal-backdrop" onPointerDown={() => setActiveMovie(null)}>
+          <section className="movie-modal" role="dialog" aria-modal="true" aria-labelledby="movie-modal-title" onPointerDown={(event) => event.stopPropagation()}>
+            <button className="modal-close" onClick={() => setActiveMovie(null)} aria-label="Закрыть">×</button>
+            <div className="movie-modal-poster"><Poster movie={activeMovie} /></div>
+            <div className="movie-modal-copy">
+              <span className="modal-kicker">{activeMovie.year} · ФАЗА {activeMovie.phase}</span>
+              <h2 id="movie-modal-title">{activeMovie.title}</h2>
+              <p>{activeMovie.original}</p>
+              <div className="source-note">
+                <b>Внешний источник</b>
+                <span>Marvel Group иногда отвечает ошибкой HTTP2. Это состояние их сервера и не зависит от хостинга этой карты.</span>
+              </div>
+              <div className="movie-modal-actions">
+                <a className="primary-button" href={playerLink(activeMovie)} target="_blank" rel="noopener noreferrer">Открыть Marvel Group ↗</a>
+                <a className="secondary-button" href={`https://www.justwatch.com/ru/поиск?q=${encodeURIComponent(activeMovie.title)}`} target="_blank" rel="noopener noreferrer">Найти легальный просмотр</a>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
 
       {helpOpen && (
         <div className="modal-backdrop" onPointerDown={() => setHelpOpen(false)}>
@@ -606,8 +625,8 @@ export default function Home() {
             <span className="modal-kicker">КАК ЭТО РАБОТАЕТ</span>
             <h2 id="help-title">Ваша карта киновселенной</h2>
             <div className="help-grid">
-              <div><b>01</b><h3>Исследуйте</h3><p>Тяните пустое пространство и масштабируйте карту. Фазы идут слева направо.</p></div>
-              <div><b>02</b><h3>Дополняйте</h3><p>Добавляйте свои фото, заметки и стрелки. Объекты можно свободно перемещать.</p></div>
+              <div><b>01</b><h3>Исследуйте</h3><p>Тяните пустое пространство, а колесом масштабируйте карту относительно курсора. Фазы идут слева направо.</p></div>
+              <div><b>02</b><h3>Дополняйте</h3><p>Добавляйте фото, заметки и стрелки. Выбранное фото можно увеличить, уменьшить или удалить.</p></div>
               <div><b>03</b><h3>Смотрите</h3><p>Нажмите на постер — фильм откроется на внешнем сайте в новой вкладке.</p></div>
             </div>
             <button className="primary-button" onClick={() => setHelpOpen(false)}>Начать путешествие</button>
