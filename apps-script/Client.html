@@ -19,7 +19,26 @@ const movieY=(index)=>index%2===0?500:1110;
 const phaseFor=(id)=>PHASES.find((phase)=>phase.id===id);
 const escapeHtml=(value)=>String(value??"").replace(/[&<>"]/g,(char)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[char]));
 
-function gas(functionName,...args){return new Promise((resolve,reject)=>google.script.run.withSuccessHandler(resolve).withFailureHandler((error)=>reject(new Error(error&&error.message?error.message:String(error)) ))[functionName](...args));}
+function gas(functionName,...args){
+  return new Promise((resolve,reject)=>{
+    let settled=false;
+    const timer=setTimeout(()=>{if(!settled){settled=true;reject(new Error("Google Apps Script не ответил за 20 секунд. Обновите страницу и проверьте разрешения."));}},20000);
+    const success=(value)=>{if(settled)return;settled=true;clearTimeout(timer);resolve(value);};
+    const failure=(error)=>{if(settled)return;settled=true;clearTimeout(timer);reject(new Error(error&&error.message?error.message:String(error)));};
+    const runner=google.script.run.withSuccessHandler(success).withFailureHandler(failure);
+    try{
+      if(functionName==="getBootstrap")runner.getBootstrap();
+      else if(functionName==="loadBoardSnapshot")runner.loadBoardSnapshot(args[0]);
+      else if(functionName==="mutateBoard")runner.mutateBoard(args[0]);
+      else if(functionName==="uploadPhoto")runner.uploadPhoto(args[0]);
+      else if(functionName==="loadPhotos")runner.loadPhotos(args[0]);
+      else if(functionName==="addAuthorizedUser")runner.addAuthorizedUser(args[0]);
+      else if(functionName==="removeAuthorizedUser")runner.removeAuthorizedUser(args[0]);
+      else if(functionName==="getProjectLinks")runner.getProjectLinks();
+      else failure(new Error("Неизвестная серверная функция"));
+    }catch(error){failure(error);}
+  });
+}
 function setSync(mode,text){const node=$("#syncIndicator");node.className=`sync-indicator ${mode||""}`;node.querySelector("span").textContent=text;}
 function toast(message){const node=$("#toast");node.textContent=message;node.hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>node.hidden=true,2800);}
 function fail(error){console.error(error);setSync("error","Ошибка сохранения");toast(error.message||"Не удалось сохранить изменение");}
