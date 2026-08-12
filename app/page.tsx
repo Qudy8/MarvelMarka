@@ -131,6 +131,9 @@ const STORAGE_KEY = "marvel-timeline-board-v1";
 const WORLD_WIDTH = 11000;
 const WORLD_HEIGHT = 2500;
 const TIMELINE_Y = 980;
+const MAX_VIEW_X = 0;
+
+const clampViewX = (x: number) => Math.min(MAX_VIEW_X, x);
 
 const getMovieX = (index: number) => 520 + index * 266;
 const getMovieY = (index: number) => (index % 2 === 0 ? 500 : 1110);
@@ -193,7 +196,7 @@ export default function Home() {
   }>(null);
   const suppressPosterClickRef = useRef(false);
   const [tool, setTool] = useState<Tool>("select");
-  const [view, setView] = useState<ViewState>({ x: 100, y: -250, scale: 0.72 });
+  const [view, setView] = useState<ViewState>({ x: 0, y: -250, scale: 0.72 });
   const [items, setItems] = useState<BoardItem[]>([]);
   const [arrows, setArrows] = useState<BoardArrow[]>([]);
   const [watched, setWatched] = useState<string[]>([]);
@@ -334,7 +337,7 @@ export default function Home() {
         if (drag.pointerId !== undefined) event.currentTarget.setPointerCapture(drag.pointerId);
       }
       event.preventDefault();
-      setView((current) => ({ ...current, x: drag.originX + dx, y: drag.originY + dy }));
+      setView((current) => ({ ...current, x: clampViewX(drag.originX + dx), y: drag.originY + dy }));
       return;
     }
     const dx = (event.clientX - drag.startX) / view.scale;
@@ -361,7 +364,7 @@ export default function Home() {
     const nextScale = Math.min(1.45, Math.max(0.28, view.scale * Math.exp(-event.deltaY * 0.0018)));
     const worldX = (mouseX - view.x) / view.scale;
     const worldY = (mouseY - view.y) / view.scale;
-    setView({ x: mouseX - worldX * nextScale, y: mouseY - worldY * nextScale, scale: nextScale });
+    setView({ x: clampViewX(mouseX - worldX * nextScale), y: mouseY - worldY * nextScale, scale: nextScale });
   };
 
   const startItemDrag = (event: React.PointerEvent, item: BoardItem) => {
@@ -411,7 +414,7 @@ export default function Home() {
   const focusPhase = (phase: PhaseId) => {
     const firstIndex = MOVIES.findIndex((movie) => movie.phase === phase);
     const rect = viewportRef.current?.getBoundingClientRect();
-    setView((current) => ({ ...current, x: (rect?.width ?? 900) * 0.22 - getMovieX(firstIndex) * current.scale, y: -250 }));
+    setView((current) => ({ ...current, x: clampViewX((rect?.width ?? 900) * 0.22 - getMovieX(firstIndex) * current.scale), y: -250 }));
   };
 
   const focusSearch = () => {
@@ -419,7 +422,7 @@ export default function Home() {
     if (!movie || !query.trim()) return;
     const index = MOVIES.indexOf(movie);
     const rect = viewportRef.current?.getBoundingClientRect();
-    setView((current) => ({ ...current, x: (rect?.width ?? 900) / 2 - getMovieX(index) * current.scale, y: (rect?.height ?? 700) / 2 - getMovieY(index) * current.scale }));
+    setView((current) => ({ ...current, x: clampViewX((rect?.width ?? 900) / 2 - getMovieX(index) * current.scale), y: (rect?.height ?? 700) / 2 - getMovieY(index) * current.scale }));
   };
 
   const resetBoard = () => {
@@ -427,7 +430,7 @@ export default function Home() {
       const accepted = window.confirm("Удалить все ваши фото, заметки и стрелки с этой карты?");
       if (!accepted) return;
     }
-    setItems([]); setArrows([]); setWatched([]); setSelected(null); setView({ x: 100, y: -250, scale: 0.72 });
+    setItems([]); setArrows([]); setWatched([]); setSelected(null); setView({ x: 0, y: -250, scale: 0.72 });
     setToast("Карта возвращена к началу");
   };
 
@@ -435,7 +438,10 @@ export default function Home() {
     <main className={`app-shell tool-${tool}`}>
       <header className="topbar">
         <div className="brand-block">
-          <span className="marvel-mark">MARVEL</span>
+          <span className="marvel-mark">
+            MARVEL
+            <span className="creator-sticker">by GUACAMOLEMOLLY</span>
+          </span>
           <span className="brand-divider" />
           <div>
             <h1>Timeline Board</h1>

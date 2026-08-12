@@ -33,8 +33,9 @@ button { color: inherit; }
   box-shadow: 0 12px 40px rgba(0,0,0,.24); backdrop-filter: blur(18px);
 }
 
-.brand-block { display: flex; align-items: center; gap: 14px; min-width: 0; }
-.marvel-mark { font-family: Oswald, Impact, sans-serif; font-size: 20px; line-height: 1; letter-spacing: -1px; background: var(--red); padding: 7px 8px 6px; }
+.brand-block { display: flex; align-items: center; gap: 18px; min-width: 0; }
+.marvel-mark { position: relative; display: inline-block; flex: 0 0 auto; font-family: Oswald, Impact, sans-serif; font-size: 20px; line-height: 1; letter-spacing: -1px; background: var(--red); padding: 7px 8px 6px; }
+.creator-sticker { position: absolute; z-index: 2; left: -4px; bottom: -9px; padding: 3px 6px 2px; background: #16a765; color: #fff; font-family: Arial, Helvetica, sans-serif; font-size: 6.5px; line-height: 1; font-weight: 900; letter-spacing: .025em; white-space: nowrap; transform: rotate(-7deg); transform-origin: center; box-shadow: 0 3px 8px rgba(0,0,0,.35); clip-path: polygon(3% 0, 100% 8%, 97% 100%, 0 91%); }
 .brand-divider { width: 1px; height: 31px; background: var(--line); }
 .brand-block h1 { font-family: Oswald, Impact, sans-serif; font-size: 17px; letter-spacing: .06em; text-transform: uppercase; margin: 0 0 2px; }
 .brand-block p { margin: 0; font-size: 10px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
