@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <base target="_blank">
+  <meta charset="utf-8">
+  <?!= include('Styles'); ?>
+</head>
+<body>
+  <div id="loading" class="gate-screen">
+    <div class="gate-card loading-card">
+      <span class="gate-marvel">MARVEL</span>
+      <div class="gate-loader"><i></i><i></i><i></i></div>
+      <h1>Открываем общую карту</h1>
+      <p>Проверяем Google-аккаунт и загружаем последние изменения.</p>
+    </div>
+  </div>
+
+  <div id="denied" class="gate-screen" hidden>
+    <div class="gate-card denied-card">
+      <span class="gate-kicker">ДОСТУП ЗАКРЫТ</span>
+      <h1>Эта карта доступна только приглашённым</h1>
+      <p id="deniedReason">Вашего Google-аккаунта нет в списке доступа.</p>
+      <div id="deniedEmail" class="account-pill"></div>
+      <p class="gate-hint">Владелец может добавить этот адрес на листе «Доступ» или в панели управления сайтом.</p>
+      <button class="primary-button" onclick="window.location.reload()">Проверить ещё раз</button>
+    </div>
+  </div>
+
+  <main id="app" class="app-shell" hidden>
+    <header class="topbar">
+      <div class="brand-block">
+        <span class="marvel-mark">MARVEL<span class="creator-sticker">by GUACAMOLEMOLLY</span></span>
+        <span class="brand-divider"></span>
+        <div><h1>Timeline Board</h1><p id="progressText">0 из 38 просмотрено · общая карта</p></div>
+      </div>
+
+      <div class="search-wrap">
+        <span aria-hidden="true">⌕</span>
+        <input id="searchInput" placeholder="Найти героя, фильм или год" aria-label="Поиск по фильмам">
+        <button id="clearSearch" aria-label="Очистить поиск" hidden>×</button>
+      </div>
+
+      <div class="top-actions">
+        <div class="sync-indicator" id="syncIndicator"><i></i><span>Синхронизировано</span></div>
+        <button id="userButton" class="user-button" aria-label="Пользователь"><span id="userInitial">G</span><b id="userName">Google</b></button>
+        <button id="helpButton" class="round-button" aria-label="Как пользоваться">?</button>
+      </div>
+    </header>
+
+    <nav id="phasebar" class="phasebar" aria-label="Фазы киновселенной Marvel"></nav>
+
+    <aside id="toolbox" class="toolbox open" aria-label="Инструменты карты">
+      <button id="collapseTools" class="collapse" aria-label="Свернуть инструменты">‹</button>
+      <div class="toolbox-title">СОЗДАТЬ</div>
+      <button class="tool-button active" data-tool="select"><span class="tool-icon">↖</span><span class="tool-label">Выбор</span><kbd>V</kbd></button>
+      <span class="tool-separator"></span>
+      <button class="tool-button" data-tool="text"><span class="tool-icon">T</span><span class="tool-label">Текст</span><kbd>T</kbd></button>
+      <button class="tool-button" data-tool="image"><span class="tool-icon">▧</span><span class="tool-label">Фото</span><kbd>I</kbd></button>
+      <input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+    </aside>
+
+    <div id="viewport" class="board-viewport">
+      <div id="world" class="world-grid">
+        <div class="world-heading">
+          <span>АРХИВ · ЗЕМЛЯ—616</span>
+          <h2>Сага разворачивается<br>слева направо.</h2>
+          <p>Перетаскивайте пространство. Нажмите на постер, чтобы открыть фильм на SSpoisk.</p>
+        </div>
+        <div class="timeline-line"></div>
+        <div id="phaseRanges"></div>
+        <div id="movieNodes"></div>
+        <div id="boardItems"></div>
+      </div>
+    </div>
+
+    <div class="zoom-control">
+      <button id="zoomOut" aria-label="Уменьшить">−</button><span id="zoomValue">72%</span><button id="zoomIn" aria-label="Увеличить">+</button>
+    </div>
+    <div class="board-status"><span class="live-dot"></span><span id="statusText">Общая карта Google</span><kbd>колесо</kbd><span>масштаб под курсором</span></div>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </main>
+
+  <div id="helpModal" class="modal-backdrop" hidden>
+    <section class="help-modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <button class="modal-close" data-close-modal="helpModal" aria-label="Закрыть">×</button>
+      <span class="modal-kicker">КАК ЭТО РАБОТАЕТ</span>
+      <h2 id="helpTitle">Ваша общая киновселенная</h2>
+      <div class="help-grid">
+        <div><b>01</b><h3>Исследуйте</h3><p>Тяните карту и масштабируйте её колесом. Фазы идут слева направо.</p></div>
+        <div><b>02</b><h3>Дополняйте</h3><p>Фото, заметки и отметки сразу сохраняются в общей Google-карте.</p></div>
+        <div><b>03</b><h3>Работайте вместе</h3><p>Изменения второго участника появляются автоматически, пока карта открыта.</p></div>
+      </div>
+      <button class="primary-button" data-close-modal="helpModal">Продолжить</button>
+    </section>
+  </div>
+
+  <div id="accountModal" class="modal-backdrop" hidden>
+    <section class="account-modal" role="dialog" aria-modal="true" aria-labelledby="accountTitle">
+      <button class="modal-close" data-close-modal="accountModal" aria-label="Закрыть">×</button>
+      <span class="modal-kicker">GOOGLE-ДОСТУП</span>
+      <h2 id="accountTitle">Участники карты</h2>
+      <p id="currentAccount" class="current-account"></p>
+      <div id="ownerControls" hidden>
+        <form id="accessForm" class="access-form">
+          <input id="accessEmail" type="email" placeholder="gmail@example.com" required>
+          <input id="accessName" type="text" placeholder="Имя (необязательно)">
+          <button class="primary-button" type="submit">Добавить доступ</button>
+        </form>
+        <div id="accessList" class="access-list"></div>
+        <div class="owner-links">
+          <button id="openSheet" class="secondary-button">Открыть Google Таблицу</button>
+          <button id="resetBoard" class="danger-button">Очистить общую карту</button>
+        </div>
+      </div>
+      <p id="memberNote" class="member-note">Доступ к карте выдан владельцем. Управлять участниками может только владелец.</p>
+    </section>
+  </div>
+
+  <?!= include('Client'); ?>
+</body>
+</html>
