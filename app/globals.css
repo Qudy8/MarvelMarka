@@ -83,7 +83,7 @@ button { color: inherit; }
 .tool-button kbd { font-size: 9px; border: 1px solid rgba(255,255,255,.1); color: #697284; border-radius: 4px; padding: 2px 4px; text-align: center; }
 .tool-separator { display: block; height: 1px; background: var(--line); margin: 7px 7px; }
 
-.board-viewport { position: absolute; inset: 126px 0 0; overflow: hidden; touch-action: none; cursor: grab; }
+.board-viewport { position: absolute; inset: 126px 0 0; overflow: hidden; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
 .board-viewport:active { cursor: grabbing; }
 .tool-arrow .board-viewport { cursor: crosshair; }
 .world-grid {

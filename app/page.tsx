@@ -182,6 +182,8 @@ export default function Home() {
   const dragRef = useRef<null | {
     kind: "pan" | "item" | "resize";
     id?: string;
+    pointerId?: number;
+    moved?: boolean;
     startX: number;
     startY: number;
     originX: number;
@@ -189,6 +191,7 @@ export default function Home() {
     originWidth?: number;
     originHeight?: number;
   }>(null);
+  const suppressPosterClickRef = useRef(false);
   const [tool, setTool] = useState<Tool>("select");
   const [view, setView] = useState<ViewState>({ x: 100, y: -250, scale: 0.72 });
   const [items, setItems] = useState<BoardItem[]>([]);
@@ -294,7 +297,9 @@ export default function Home() {
   };
 
   const handleViewportPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.target !== event.currentTarget && !(event.target as HTMLElement).classList.contains("world-grid")) return;
+    if (event.button !== 0) return;
+    const target = event.target as HTMLElement;
+    if (target.closest(".watched-control, .board-item, textarea, input, button")) return;
     setSelected(null);
     if (tool === "arrow") {
       const point = screenToWorld(event.clientX, event.clientY);
@@ -309,15 +314,27 @@ export default function Home() {
       }
       return;
     }
-    dragRef.current = { kind: "pan", startX: event.clientX, startY: event.clientY, originX: view.x, originY: view.y };
-    event.currentTarget.setPointerCapture(event.pointerId);
+    suppressPosterClickRef.current = false;
+    dragRef.current = {
+      kind: "pan", pointerId: event.pointerId, moved: false,
+      startX: event.clientX, startY: event.clientY, originX: view.x, originY: view.y,
+    };
   };
 
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
     if (!drag) return;
     if (drag.kind === "pan") {
-      setView((current) => ({ ...current, x: drag.originX + event.clientX - drag.startX, y: drag.originY + event.clientY - drag.startY }));
+      const dx = event.clientX - drag.startX;
+      const dy = event.clientY - drag.startY;
+      if (!drag.moved) {
+        if (Math.hypot(dx, dy) < 4) return;
+        drag.moved = true;
+        suppressPosterClickRef.current = true;
+        if (drag.pointerId !== undefined) event.currentTarget.setPointerCapture(drag.pointerId);
+      }
+      event.preventDefault();
+      setView((current) => ({ ...current, x: drag.originX + dx, y: drag.originY + dy }));
       return;
     }
     const dx = (event.clientX - drag.startX) / view.scale;
@@ -471,6 +488,7 @@ export default function Home() {
         onPointerMove={handlePointerMove}
         onPointerUp={stopDrag}
         onPointerCancel={stopDrag}
+        onDragStart={(event) => event.preventDefault()}
         onWheel={handleWheel}
       >
         <div className="world-grid" style={{ width: WORLD_WIDTH, height: WORLD_HEIGHT, transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` }}>
@@ -517,7 +535,13 @@ export default function Home() {
                     href={movieLink(movie)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onPointerDown={(event) => event.stopPropagation()}
+                    draggable={false}
+                    onClick={(event) => {
+                      if (!suppressPosterClickRef.current) return;
+                      event.preventDefault();
+                      event.stopPropagation();
+                      suppressPosterClickRef.current = false;
+                    }}
                     aria-label={`Открыть страницу фильма «${movie.title}» на Кинопоиске`}
                   >
                     <Poster movie={movie} />
