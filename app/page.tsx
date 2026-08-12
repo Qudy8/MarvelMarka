@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-type Tool = "select" | "hand" | "text" | "arrow" | "image";
+type Tool = "select" | "text" | "arrow" | "image";
 type PhaseId = 1 | 2 | 3 | 4 | 5 | 6;
 
 type Movie = {
@@ -86,7 +86,7 @@ const PHASES: Array<{ id: PhaseId; label: string; years: string; color: string }
   { id: 6, label: "Фаза VI", years: "2025—", color: "#f278ff" },
 ];
 
-const KINOPOISK_IDS: Record<string, string> = {
+const SSPOISK_IDS: Record<string, string> = {
   "iron-man": "61237",
   "hulk": "255380",
   "iron-man-2": "411924",
@@ -140,7 +140,7 @@ function uid(prefix: string) {
 }
 
 function movieLink(movie: Movie) {
-  return `https://www.kinopoisk.ru/film/${KINOPOISK_IDS[movie.id]}/`;
+  return `https://www.sspoisk.ru/film/${SSPOISK_IDS[movie.id]}/`;
 }
 
 function Poster({ movie }: { movie: Movie }) {
@@ -473,7 +473,6 @@ export default function Home() {
         <button className="collapse" onClick={() => setSidebarOpen((value) => !value)} aria-label={sidebarOpen ? "Свернуть инструменты" : "Развернуть инструменты"}>{sidebarOpen ? "‹" : "›"}</button>
         <div className="toolbox-title">СОЗДАТЬ</div>
         <ToolButton active={tool === "select"} icon="↖" label="Выбор" shortcut="V" onClick={() => chooseTool("select")} />
-        <ToolButton active={tool === "hand"} icon="✋" label="Двигать" shortcut="H" onClick={() => chooseTool("hand")} />
         <span className="tool-separator" />
         <ToolButton active={false} icon="T" label="Текст" shortcut="T" onClick={() => chooseTool("text")} />
         <ToolButton active={tool === "arrow"} icon="↗" label="Стрелка" shortcut="A" onClick={() => chooseTool("arrow")} />
@@ -495,7 +494,7 @@ export default function Home() {
           <div className="world-heading">
             <span>АРХИВ · ЗЕМЛЯ—616</span>
             <h2>Сага разворачивается<br />слева направо.</h2>
-            <p>Перетаскивайте пространство. Нажмите на постер, чтобы открыть фильм на Кинопоиске.</p>
+            <p>Перетаскивайте пространство. Нажмите на постер, чтобы открыть фильм на SSpoisk.</p>
           </div>
 
           <div className="timeline-line" style={{ top: TIMELINE_Y }} />
@@ -542,7 +541,7 @@ export default function Home() {
                       event.stopPropagation();
                       suppressPosterClickRef.current = false;
                     }}
-                    aria-label={`Открыть страницу фильма «${movie.title}» на Кинопоиске`}
+                    aria-label={`Открыть страницу фильма «${movie.title}» на SSpoisk`}
                   >
                     <Poster movie={movie} />
                     <span className="play-orbit"><b>▶</b></span>
@@ -641,7 +640,7 @@ export default function Home() {
             <div className="help-grid">
               <div><b>01</b><h3>Исследуйте</h3><p>Тяните пустое пространство, а колесом масштабируйте карту относительно курсора. Фазы идут слева направо.</p></div>
               <div><b>02</b><h3>Дополняйте</h3><p>Добавляйте фото, заметки и стрелки. Выбранное фото можно увеличить, уменьшить или удалить.</p></div>
-              <div><b>03</b><h3>Открывайте</h3><p>Нажмите на постер — страница фильма на Кинопоиске откроется в новой вкладке.</p></div>
+              <div><b>03</b><h3>Открывайте</h3><p>Нажмите на постер — страница фильма на SSpoisk откроется в новой вкладке.</p></div>
             </div>
             <button className="primary-button" onClick={() => setHelpOpen(false)}>Начать путешествие</button>
           </section>
