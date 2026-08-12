@@ -41,7 +41,10 @@ async function render() {
     .replace(/^\s*<script(?:\s[^>]*)?>\s*/i, "")
     .replace(/\s*<\/script>\s*$/i, "");
   html = html.replace("<?!= include('Styles'); ?>", styles);
-  html = html.replace("<?!= include('Client'); ?>", mock + client);
+  html = html.replace(
+    '<script src="<?!= clientScriptUrl(); ?>"></script>',
+    `<script>${mock}${client}</script>`
+  );
   return html;
 }
 

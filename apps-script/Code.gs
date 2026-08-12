@@ -9,7 +9,11 @@ const APP = Object.freeze({
   maxPhotoBytes: 2500000,
 });
 
-function doGet() {
+function doGet(event) {
+  if (event && event.parameter && event.parameter.asset === "client") {
+    return ContentService.createTextOutput(getClientSource_())
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
   return HtmlService.createTemplateFromFile("Index")
     .evaluate()
     .setTitle("Marvel Timeline Board")
@@ -17,13 +21,17 @@ function doGet() {
 }
 
 function include(filename) {
-  const content = HtmlService.createHtmlOutputFromFile(filename).getContent();
-  if (filename === "Client") {
-    return content
-      .replace(/^\s*<script(?:\s[^>]*)?>\s*/i, "")
-      .replace(/\s*<\/script>\s*$/i, "");
-  }
-  return content;
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+function getClientSource_() {
+  return HtmlService.createHtmlOutputFromFile("Client").getContent()
+    .replace(/^\s*<script(?:\s[^>]*)?>\s*/i, "")
+    .replace(/\s*<\/script>\s*$/i, "");
+}
+
+function clientScriptUrl() {
+  return ScriptApp.getService().getUrl() + "?asset=client&v=9";
 }
 
 /**
