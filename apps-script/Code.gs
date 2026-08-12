@@ -13,7 +13,6 @@ function doGet() {
   return HtmlService.createTemplateFromFile("Index")
     .evaluate()
     .setTitle("Marvel Timeline Board")
-    .setFaviconUrl("https://upload.wikimedia.org/wikipedia/commons/b/b9/Marvel_Logo.svg")
     .addMetaTag("viewport", "width=device-width, initial-scale=1, viewport-fit=cover");
 }
 
