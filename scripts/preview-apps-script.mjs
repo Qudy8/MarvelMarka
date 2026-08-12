@@ -7,7 +7,6 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "a
 const port = Number(process.argv[2] || 4174);
 
 const mock = `
-<script>
 const previewBoard = { revision: 4, watched: ["iron-man", "avengers"], items: [
   { id: "preview-note", type: "text", x: 900, y: 270, width: 260, height: 130, content: "Общая заметка", color: "#ffe66d" }
 ], updatedAt: new Date().toISOString(), updatedBy: "owner@gmail.com" };
@@ -33,7 +32,7 @@ window.google = { script: { run: new Proxy({}, {
     };
   }
 }) } };
-</script>`;
+`;
 
 async function render() {
   let html = await readFile(path.join(root, "Index.html"), "utf8");
