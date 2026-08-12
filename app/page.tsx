@@ -86,6 +86,47 @@ const PHASES: Array<{ id: PhaseId; label: string; years: string; color: string }
   { id: 6, label: "Фаза VI", years: "2025—", color: "#f278ff" },
 ];
 
+const PLAYER_SLUGS: Record<string, string> = {
+  "iron-man": "zheleznyj-chelovek",
+  "hulk": "neveroyatnyj-halk",
+  "iron-man-2": "zheleznyj-chelovek-2",
+  "thor": "tor",
+  "first-avenger": "pervyj-mstitel",
+  "avengers": "mstiteli",
+  "iron-man-3": "zheleznyj-chelovek-3",
+  "thor-dark": "tor-2-carstvo-tmy",
+  "winter-soldier": "pervyj-mstitel-drugaya-vojna",
+  "guardians": "strazhi-galaktiki",
+  "ultron": "mstiteli-era-altrona",
+  "ant-man": "chelovek-muravej",
+  "civil-war": "pervyj-mstitel-protivostoyanie",
+  "doctor-strange": "doktor-strendzh",
+  "guardians-2": "strazhi-galaktiki-chast-2",
+  "homecoming": "chelovek-pauk-vozvrashhenie-domoj",
+  "ragnarok": "tor-ragnaryok",
+  "black-panther": "chyornaya-pantera",
+  "infinity-war": "mstiteli-vojna-beskonechnosti",
+  "ant-man-wasp": "chelovek-muravej-i-osa",
+  "captain-marvel": "kapitan-marvel",
+  "endgame": "mstiteli-final",
+  "far-from-home": "chelovek-pauk-vdali-ot-doma",
+  "black-widow": "chyornaya-vdova",
+  "shang-chi": "shan-chi-i-legenda-desyati-kolec",
+  "eternals": "vechnye",
+  "no-way-home": "chelovek-pauk-net-puti-domoj",
+  "multiverse-madness": "doktor-strendzh-v-multivselennoj-bezumiya",
+  "love-thunder": "tor-lyubov-i-grom",
+  "wakanda": "chyornaya-pantera-vakanda-navsegda",
+  "quantumania": "chelovek-muravej-i-osa-kvantomaniya",
+  "guardians-3": "strazhi-galaktiki-chast-3",
+  "marvels": "kapitan-marvel-2",
+  "deadpool-wolverine": "dedpul-i-rosomaha",
+  "brave-new-world": "kapitan-amerika-novyj-mir",
+  "thunderbolts": "gromoverzhcy",
+  "fantastic-four": "fantasticheskaya-chetvyorka-pervye-shagi",
+  "spider-man-new-day": "chelovek-pauk-sovershenno-novyj-den",
+};
+
 const STORAGE_KEY = "marvel-timeline-board-v1";
 const WORLD_WIDTH = 11000;
 const WORLD_HEIGHT = 2500;
@@ -99,7 +140,7 @@ function uid(prefix: string) {
 }
 
 function playerLink(movie: Movie) {
-  return `https://marvel-group.ru/?s=${encodeURIComponent(`${movie.title} ${movie.year}`)}`;
+  return `https://marvel-group.ru/${PLAYER_SLUGS[movie.id] ?? movie.id}/`;
 }
 
 function Poster({ movie }: { movie: Movie }) {
@@ -139,17 +180,20 @@ export default function Home() {
   const viewportRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragRef = useRef<null | {
-    kind: "pan" | "item";
+    kind: "pan" | "item" | "resize";
     id?: string;
     startX: number;
     startY: number;
     originX: number;
     originY: number;
+    originWidth?: number;
+    originHeight?: number;
   }>(null);
   const [tool, setTool] = useState<Tool>("select");
   const [view, setView] = useState<ViewState>({ x: 100, y: -250, scale: 0.72 });
   const [items, setItems] = useState<BoardItem[]>([]);
   const [arrows, setArrows] = useState<BoardArrow[]>([]);
+  const [watched, setWatched] = useState<string[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [arrowStart, setArrowStart] = useState<{ x: number; y: number } | null>(null);
   const [query, setQuery] = useState("");
@@ -165,6 +209,7 @@ export default function Home() {
         const data = JSON.parse(saved);
         setItems(Array.isArray(data.items) ? data.items : []);
         setArrows(Array.isArray(data.arrows) ? data.arrows : []);
+        setWatched(Array.isArray(data.watched) ? data.watched : []);
       }
     } catch {
       localStorage.removeItem(STORAGE_KEY);
@@ -174,8 +219,8 @@ export default function Home() {
 
   useEffect(() => {
     if (!hydrated) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ items, arrows }));
-  }, [items, arrows, hydrated]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ items, arrows, watched }));
+  }, [items, arrows, watched, hydrated]);
 
   useEffect(() => {
     if (!toast) return;
@@ -277,6 +322,15 @@ export default function Home() {
     }
     const dx = (event.clientX - drag.startX) / view.scale;
     const dy = (event.clientY - drag.startY) / view.scale;
+    if (drag.kind === "resize") {
+      const startWidth = drag.originWidth ?? 340;
+      const startHeight = drag.originHeight ?? 240;
+      const ratio = startHeight / startWidth;
+      const dominantDelta = Math.abs(dx) >= Math.abs(dy) ? dx : dy / ratio;
+      const width = Math.min(1200, Math.max(120, startWidth + dominantDelta));
+      setItems((current) => current.map((item) => item.id === drag.id ? { ...item, width, height: width * ratio } : item));
+      return;
+    }
     setItems((current) => current.map((item) => item.id === drag.id ? { ...item, x: drag.originX + dx, y: drag.originY + dy } : item));
   };
 
@@ -303,6 +357,23 @@ export default function Home() {
     setSelected(item.id);
     dragRef.current = { kind: "item", id: item.id, startX: event.clientX, startY: event.clientY, originX: item.x, originY: item.y };
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+  };
+
+  const startImageResize = (event: React.PointerEvent, item: BoardItem) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setSelected(item.id);
+    dragRef.current = {
+      kind: "resize", id: item.id,
+      startX: event.clientX, startY: event.clientY,
+      originX: item.x, originY: item.y,
+      originWidth: item.width, originHeight: item.height,
+    };
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+  };
+
+  const toggleWatched = (movieId: string) => {
+    setWatched((current) => current.includes(movieId) ? current.filter((id) => id !== movieId) : [...current, movieId]);
   };
 
   const deleteSelected = useCallback(() => {
@@ -339,11 +410,11 @@ export default function Home() {
   };
 
   const resetBoard = () => {
-    if (items.length || arrows.length) {
+    if (items.length || arrows.length || watched.length) {
       const accepted = window.confirm("Удалить все ваши фото, заметки и стрелки с этой карты?");
       if (!accepted) return;
     }
-    setItems([]); setArrows([]); setSelected(null); setView({ x: 100, y: -250, scale: 0.72 });
+    setItems([]); setArrows([]); setWatched([]); setSelected(null); setView({ x: 100, y: -250, scale: 0.72 });
     setToast("Карта возвращена к началу");
   };
 
@@ -355,7 +426,7 @@ export default function Home() {
           <span className="brand-divider" />
           <div>
             <h1>Timeline Board</h1>
-            <p>{MOVIES.length} фильмов · 6 фаз · 1 большая история</p>
+            <p>{watched.length} из {MOVIES.length} просмотрено · 6 фаз</p>
           </div>
         </div>
 
@@ -434,10 +505,11 @@ export default function Home() {
             const above = y < TIMELINE_Y;
             const phase = PHASES.find((entry) => entry.id === movie.phase)!;
             const matched = matchingIds.has(movie.id);
+            const isWatched = watched.includes(movie.id);
             return (
               <article
                 key={movie.id}
-                className={`movie-node ${above ? "above" : "below"} ${matched ? "matched" : "muted"}`}
+                className={`movie-node ${above ? "above" : "below"} ${matched ? "matched" : "muted"} ${isWatched ? "watched" : ""}`}
                 style={{ left: x, top: y, "--phase": phase.color } as React.CSSProperties}
               >
                 <span className="connector" />
@@ -452,6 +524,11 @@ export default function Home() {
                   <h3>{movie.title}</h3>
                   <p>{movie.original}</p>
                 </div>
+                <label className="watched-control" onPointerDown={(event) => event.stopPropagation()}>
+                  <input type="checkbox" checked={isWatched} onChange={() => toggleWatched(movie.id)} />
+                  <i aria-hidden="true">✓</i>
+                  <span>{isWatched ? "Просмотрено" : "Отметить просмотренным"}</span>
+                </label>
               </article>
             );
           })}
@@ -494,6 +571,15 @@ export default function Home() {
                 />
               )}
               {selected === item.id && <button className="item-delete" onClick={(event) => { event.stopPropagation(); deleteSelected(); }} aria-label="Удалить объект">×</button>}
+              {selected === item.id && item.type === "image" && (
+                <button
+                  className="resize-handle"
+                  onPointerDown={(event) => startImageResize(event, item)}
+                  onPointerUp={stopDrag}
+                  aria-label="Изменить размер фотографии"
+                  title="Потяните, чтобы изменить размер"
+                />
+              )}
             </div>
           ))}
         </div>
