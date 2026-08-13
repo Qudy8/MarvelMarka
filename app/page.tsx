@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-type Tool = "select" | "text" | "image";
 type PhaseId = 1 | 2 | 3 | 4 | 5 | 6;
 
 type Movie = {
@@ -12,18 +11,6 @@ type Movie = {
   year: number;
   phase: PhaseId;
   wiki: string;
-};
-
-type BoardItem = {
-  id: string;
-  type: "text" | "image";
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  content: string;
-  color: string;
-  aspectRatio?: number;
 };
 
 type ViewState = { x: number; y: number; scale: number };
@@ -124,25 +111,10 @@ const WORLD_WIDTH = 11000;
 const WORLD_HEIGHT = 2500;
 const TIMELINE_Y = 980;
 const MAX_VIEW_X = 0;
-const PHOTO_FRAME_WIDTH = 16;
-const PHOTO_FRAME_HEIGHT = 34;
-const PHOTO_LONG_EDGE = 340;
-
 const clampViewX = (x: number) => Math.min(MAX_VIEW_X, x);
-
-const getPhotoFrameSize = (aspectRatio: number, longEdge = PHOTO_LONG_EDGE) => {
-  const isLandscape = aspectRatio >= 1;
-  const contentWidth = isLandscape ? longEdge : longEdge * aspectRatio;
-  const contentHeight = isLandscape ? longEdge / aspectRatio : longEdge;
-  return { width: contentWidth + PHOTO_FRAME_WIDTH, height: contentHeight + PHOTO_FRAME_HEIGHT };
-};
 
 const getMovieX = (index: number) => 520 + index * 266;
 const getMovieY = (index: number) => (index % 2 === 0 ? 500 : 1110);
-
-function uid(prefix: string) {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-}
 
 function movieLink(movie: Movie) {
   return `https://www.sspoisk.ru/film/${SSPOISK_IDS[movie.id]}/`;
@@ -183,28 +155,18 @@ function Poster({ movie }: { movie: Movie }) {
 
 export default function Home() {
   const viewportRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const dragRef = useRef<null | {
-    kind: "pan" | "item" | "resize";
-    id?: string;
     pointerId?: number;
     moved?: boolean;
     startX: number;
     startY: number;
     originX: number;
     originY: number;
-    originWidth?: number;
-    originHeight?: number;
-    aspectRatio?: number;
   }>(null);
   const suppressPosterClickRef = useRef(false);
-  const [tool, setTool] = useState<Tool>("select");
   const [view, setView] = useState<ViewState>({ x: 0, y: -250, scale: 0.72 });
-  const [items, setItems] = useState<BoardItem[]>([]);
   const [watched, setWatched] = useState<string[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [helpOpen, setHelpOpen] = useState(false);
   const [toast, setToast] = useState("Карта готова к исследованию");
   const [hydrated, setHydrated] = useState(false);
@@ -214,7 +176,6 @@ export default function Home() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const data = JSON.parse(saved);
-        setItems(Array.isArray(data.items) ? data.items : []);
         setWatched(Array.isArray(data.watched) ? data.watched : []);
       }
     } catch {
@@ -225,30 +186,8 @@ export default function Home() {
 
   useEffect(() => {
     if (!hydrated) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ items, watched }));
-  }, [items, watched, hydrated]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    let live = true;
-    items.filter((item) => item.type === "image" && !item.aspectRatio).forEach((item) => {
-      const image = new Image();
-      image.onload = () => {
-        const aspectRatio = image.naturalWidth / image.naturalHeight;
-        if (!live || !Number.isFinite(aspectRatio) || aspectRatio <= 0) return;
-        setItems((current) => {
-          if (!current.some((entry) => entry.id === item.id && !entry.aspectRatio)) return current;
-          return current.map((entry) => {
-            if (entry.id !== item.id) return entry;
-            const longEdge = Math.max(entry.width - PHOTO_FRAME_WIDTH, entry.height - PHOTO_FRAME_HEIGHT, 1);
-            return { ...entry, ...getPhotoFrameSize(aspectRatio, longEdge), aspectRatio };
-          });
-        });
-      };
-      image.src = item.content;
-    });
-    return () => { live = false; };
-  }, [hydrated, items]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ watched }));
+  }, [watched, hydrated]);
 
   useEffect(() => {
     if (!toast) return;
@@ -262,80 +201,13 @@ export default function Home() {
     return new Set(MOVIES.filter((movie) => `${movie.title} ${movie.original} ${movie.year}`.toLocaleLowerCase("ru").includes(value)).map((movie) => movie.id));
   }, [query]);
 
-  const screenToWorld = useCallback((clientX: number, clientY: number) => {
-    const rect = viewportRef.current?.getBoundingClientRect();
-    return {
-      x: (clientX - (rect?.left ?? 0) - view.x) / view.scale,
-      y: (clientY - (rect?.top ?? 0) - view.y) / view.scale,
-    };
-  }, [view]);
-
-  const centerPoint = useCallback(() => {
-    const rect = viewportRef.current?.getBoundingClientRect();
-    return screenToWorld((rect?.left ?? 0) + (rect?.width ?? 800) / 2, (rect?.top ?? 0) + (rect?.height ?? 600) / 2);
-  }, [screenToWorld]);
-
-  const addText = useCallback((point = centerPoint()) => {
-    const next: BoardItem = {
-      id: uid("text"), type: "text", x: point.x - 130, y: point.y - 65,
-      width: 260, height: 130, content: "Новая заметка", color: "#ffe66d",
-    };
-    setItems((current) => [...current, next]);
-    setSelected(next.id);
-    setTool("select");
-    setToast("Заметка добавлена");
-  }, [centerPoint]);
-
-  const chooseTool = (next: Tool) => {
-    if (next === "image") {
-      fileInputRef.current?.click();
-      return;
-    }
-    if (next === "text") {
-      addText();
-      return;
-    }
-    setTool(next);
-  };
-
-  const handleImage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    if (file.size > 3_000_000) {
-      setToast("Выберите изображение размером до 3 МБ");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const content = String(reader.result);
-      const image = new Image();
-      image.onload = () => {
-        const aspectRatio = image.naturalWidth / image.naturalHeight;
-        const { width, height } = getPhotoFrameSize(aspectRatio);
-        const point = centerPoint();
-        const next: BoardItem = {
-          id: uid("image"), type: "image", x: point.x - width / 2, y: point.y - height / 2,
-          width, height, content, color: "#ffffff", aspectRatio,
-        };
-        setItems((current) => [...current, next]);
-        setSelected(next.id);
-        setToast("Фото добавлено в исходных пропорциях");
-      };
-      image.onerror = () => setToast("Не удалось прочитать изображение");
-      image.src = content;
-    };
-    reader.readAsDataURL(file);
-  };
-
   const handleViewportPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
     const target = event.target as HTMLElement;
-    if (target.closest(".watched-control, .board-item, textarea, input, button")) return;
-    setSelected(null);
+    if (target.closest(".watched-control, input, button")) return;
     suppressPosterClickRef.current = false;
     dragRef.current = {
-      kind: "pan", pointerId: event.pointerId, moved: false,
+      pointerId: event.pointerId, moved: false,
       startX: event.clientX, startY: event.clientY, originX: view.x, originY: view.y,
     };
   };
@@ -343,34 +215,16 @@ export default function Home() {
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
     if (!drag) return;
-    if (drag.kind === "pan") {
-      const dx = event.clientX - drag.startX;
-      const dy = event.clientY - drag.startY;
-      if (!drag.moved) {
-        if (Math.hypot(dx, dy) < 4) return;
-        drag.moved = true;
-        suppressPosterClickRef.current = true;
-        if (drag.pointerId !== undefined) event.currentTarget.setPointerCapture(drag.pointerId);
-      }
-      event.preventDefault();
-      setView((current) => ({ ...current, x: clampViewX(drag.originX + dx), y: drag.originY + dy }));
-      return;
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    if (!drag.moved) {
+      if (Math.hypot(dx, dy) < 4) return;
+      drag.moved = true;
+      suppressPosterClickRef.current = true;
+      if (drag.pointerId !== undefined) event.currentTarget.setPointerCapture(drag.pointerId);
     }
-    const dx = (event.clientX - drag.startX) / view.scale;
-    const dy = (event.clientY - drag.startY) / view.scale;
-    if (drag.kind === "resize") {
-      const startWidth = drag.originWidth ?? 340;
-      const startHeight = drag.originHeight ?? 240;
-      const ratio = startHeight / startWidth;
-      const dominantDelta = Math.abs(dx) >= Math.abs(dy) ? dx : dy / ratio;
-      const width = Math.min(1200, Math.max(120, startWidth + dominantDelta));
-      const height = drag.aspectRatio
-        ? (width - PHOTO_FRAME_WIDTH) / drag.aspectRatio + PHOTO_FRAME_HEIGHT
-        : width * ratio;
-      setItems((current) => current.map((item) => item.id === drag.id ? { ...item, width, height } : item));
-      return;
-    }
-    setItems((current) => current.map((item) => item.id === drag.id ? { ...item, x: drag.originX + dx, y: drag.originY + dy } : item));
+    event.preventDefault();
+    setView((current) => ({ ...current, x: clampViewX(drag.originX + dx), y: drag.originY + dy }));
   };
 
   const stopDrag = () => { dragRef.current = null; };
@@ -386,49 +240,9 @@ export default function Home() {
     setView({ x: clampViewX(mouseX - worldX * nextScale), y: mouseY - worldY * nextScale, scale: nextScale });
   };
 
-  const startItemDrag = (event: React.PointerEvent, item: BoardItem) => {
-    if (tool !== "select") return;
-    event.stopPropagation();
-    setSelected(item.id);
-    dragRef.current = { kind: "item", id: item.id, startX: event.clientX, startY: event.clientY, originX: item.x, originY: item.y };
-    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-  };
-
-  const startImageResize = (event: React.PointerEvent, item: BoardItem) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setSelected(item.id);
-    dragRef.current = {
-      kind: "resize", id: item.id,
-      startX: event.clientX, startY: event.clientY,
-      originX: item.x, originY: item.y,
-      originWidth: item.width, originHeight: item.height,
-      aspectRatio: item.aspectRatio,
-    };
-    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-  };
-
   const toggleWatched = (movieId: string) => {
     setWatched((current) => current.includes(movieId) ? current.filter((id) => id !== movieId) : [...current, movieId]);
   };
-
-  const deleteSelected = useCallback(() => {
-    if (!selected) return;
-    setItems((current) => current.filter((item) => item.id !== selected));
-    setSelected(null);
-    setToast("Объект удалён");
-  }, [selected]);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
-      if (event.key === "Delete" || event.key === "Backspace") deleteSelected();
-      if (event.key === "Escape") { setTool("select"); setSelected(null); }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [deleteSelected]);
 
   const focusPhase = (phase: PhaseId) => {
     const firstIndex = MOVIES.findIndex((movie) => movie.phase === phase);
@@ -445,16 +259,16 @@ export default function Home() {
   };
 
   const resetBoard = () => {
-    if (items.length || watched.length) {
-      const accepted = window.confirm("Удалить все ваши фото, заметки и отметки о просмотре с этой карты?");
+    if (watched.length) {
+      const accepted = window.confirm("Удалить все отметки о просмотре с этой карты?");
       if (!accepted) return;
     }
-    setItems([]); setWatched([]); setSelected(null); setView({ x: 0, y: -250, scale: 0.72 });
+    setWatched([]); setView({ x: 0, y: -250, scale: 0.72 });
     setToast("Карта возвращена к началу");
   };
 
   return (
-    <main className={`app-shell tool-${tool}`}>
+    <main className="app-shell">
       <header className="topbar">
         <div className="brand-block">
           <span className="marvel-mark">
@@ -493,16 +307,6 @@ export default function Home() {
           </button>
         ))}
       </nav>
-
-      <aside className={`toolbox ${sidebarOpen ? "open" : "closed"}`} aria-label="Инструменты карты">
-        <button className="collapse" onClick={() => setSidebarOpen((value) => !value)} aria-label={sidebarOpen ? "Свернуть инструменты" : "Развернуть инструменты"}>{sidebarOpen ? "‹" : "›"}</button>
-        <div className="toolbox-title">СОЗДАТЬ</div>
-        <ToolButton active={tool === "select"} icon="↖" label="Выбор" shortcut="V" onClick={() => chooseTool("select")} />
-        <span className="tool-separator" />
-        <ToolButton active={false} icon="T" label="Текст" shortcut="T" onClick={() => chooseTool("text")} />
-        <ToolButton active={false} icon="▧" label="Фото" shortcut="I" onClick={() => chooseTool("image")} />
-        <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleImage} />
-      </aside>
 
       <div
         ref={viewportRef}
@@ -589,37 +393,6 @@ export default function Home() {
             );
           })}
 
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className={`board-item ${item.type}-item ${selected === item.id ? "selected" : ""}`}
-              style={{ left: item.x, top: item.y, width: item.width, height: item.height, "--item": item.color } as React.CSSProperties}
-              onPointerDown={(event) => startItemDrag(event, item)}
-              onPointerUp={stopDrag}
-            >
-              <span className="item-grip" aria-hidden="true">•••</span>
-              {item.type === "image" ? (
-                <img src={item.content} alt="Пользовательское изображение" draggable={false} />
-              ) : (
-                <textarea
-                  value={item.content}
-                  aria-label="Текст заметки"
-                  onPointerDown={(event) => event.stopPropagation()}
-                  onChange={(event) => setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, content: event.target.value } : entry))}
-                />
-              )}
-              {selected === item.id && <button className="item-delete" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); deleteSelected(); }} aria-label="Удалить объект">×</button>}
-              {selected === item.id && item.type === "image" && (
-                <button
-                  className="resize-handle"
-                  onPointerDown={(event) => startImageResize(event, item)}
-                  onPointerUp={stopDrag}
-                  aria-label="Изменить размер фотографии"
-                  title="Потяните, чтобы изменить размер"
-                />
-              )}
-            </div>
-          ))}
         </div>
       </div>
 
@@ -645,7 +418,7 @@ export default function Home() {
             <h2 id="help-title">Ваша карта киновселенной</h2>
             <div className="help-grid">
               <div><b>01</b><h3>Исследуйте</h3><p>Тяните пустое пространство, а колесом масштабируйте карту относительно курсора. Фазы идут слева направо.</p></div>
-              <div><b>02</b><h3>Дополняйте</h3><p>Добавляйте фото и заметки. Фото сохраняет исходные пропорции при загрузке и изменении размера.</p></div>
+              <div><b>02</b><h3>Отмечайте</h3><p>Используйте чекбокс на постере, чтобы вести личный список просмотренных фильмов.</p></div>
               <div><b>03</b><h3>Открывайте</h3><p>Нажмите на постер — страница фильма на SSpoisk откроется в новой вкладке.</p></div>
             </div>
             <button className="primary-button" onClick={() => setHelpOpen(false)}>Начать путешествие</button>
@@ -653,15 +426,5 @@ export default function Home() {
         </div>
       )}
     </main>
-  );
-}
-
-function ToolButton({ active, icon, label, shortcut, onClick }: { active: boolean; icon: string; label: string; shortcut: string; onClick: () => void }) {
-  return (
-    <button className={`tool-button ${active ? "active" : ""}`} onClick={onClick} title={`${label} · ${shortcut}`} aria-label={label}>
-      <span className="tool-icon">{icon}</span>
-      <span className="tool-label">{label}</span>
-      <kbd>{shortcut}</kbd>
-    </button>
   );
 }
