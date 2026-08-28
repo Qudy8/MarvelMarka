@@ -141,9 +141,9 @@ button { color: inherit; }
 .watched-control:has(input:focus-visible) i { outline: 2px solid white; outline-offset: 3px; }
 .watched-control:has(input:checked) i { color: #06130f; background: #45e0b7; border-color: #45e0b7; box-shadow: 0 0 18px rgba(69,224,183,.48), 0 6px 20px rgba(0,0,0,.45); }
 .watched-control span { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-.movie-order { position: absolute; left: -33px; top: -10px; color: rgba(255,255,255,.13); font-family: Oswald, sans-serif; font-size: 38px; font-weight: 700; }
-.connector { position: absolute; left: 86px; width: 1px; border-left: 1px dashed rgba(255,255,255,.2); }
-.timeline-dot { position: absolute; left: 80px; width: 13px; height: 13px; border: 2px solid var(--phase); background: var(--board); border-radius: 50%; z-index: 4; box-shadow: 0 0 14px color-mix(in srgb, var(--phase), transparent 30%); }
+.movie-order { position: absolute; left: -33px; top: -10px; color: rgba(255,255,255,.13); font-family: Oswald, sans-serif; font-size: 38px; font-weight: 700; pointer-events: none; }
+.connector { position: absolute; left: 86px; width: 1px; border-left: 1px dashed rgba(255,255,255,.2); pointer-events: none; }
+.timeline-dot { position: absolute; left: 80px; width: 13px; height: 13px; border: 2px solid var(--phase); background: var(--board); border-radius: 50%; z-index: 4; box-shadow: 0 0 14px color-mix(in srgb, var(--phase), transparent 30%); pointer-events: none; }
 .timeline-dot i { position: absolute; inset: 3px; border-radius: 50%; background: var(--phase); }
 .movie-node.above .connector { top: 250px; height: 230px; }
 .movie-node.above .timeline-dot { top: 474px; }
