@@ -120,13 +120,12 @@ function movieLink(movie: Movie) {
   return `https://www.sspoisk.ru/film/${SSPOISK_IDS[movie.id]}/`;
 }
 
+function posterLink(movie: Movie) {
+  return `https://st.kp.yandex.net/images/film_big/${SSPOISK_IDS[movie.id]}.jpg`;
+}
+
 async function getHighQualityPoster(movie: Movie) {
-  const response = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(movie.wiki)}`);
-  if (!response.ok) throw new Error("Постер временно недоступен");
-  const data = await response.json();
-  const source = data?.originalimage?.source ?? data?.thumbnail?.source;
-  if (!source) throw new Error("У фильма не найден постер");
-  return String(source);
+  return posterLink(movie);
 }
 
 async function imageBlobToPng(blob: Blob) {
@@ -153,30 +152,19 @@ function blobToDataUrl(blob: Blob) {
 }
 
 function Poster({ movie }: { movie: Movie }) {
-  const [src, setSrc] = useState<string>("");
+  const [src, setSrc] = useState<string>(() => posterLink(movie));
 
   useEffect(() => {
-    let live = true;
-    const cached = sessionStorage.getItem(`poster:${movie.id}`);
-    if (cached) {
-      setSrc(cached);
-      return;
-    }
-    fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(movie.wiki)}`)
-      .then((response) => response.ok ? response.json() : Promise.reject())
-      .then((data) => {
-        const image = data?.originalimage?.source ?? data?.thumbnail?.source;
-        if (live && image) {
-          setSrc(image);
-          sessionStorage.setItem(`poster:${movie.id}`, image);
-        }
-      })
-      .catch(() => undefined);
-    return () => { live = false; };
-  }, [movie.id, movie.wiki]);
+    setSrc(posterLink(movie));
+  }, [movie]);
 
   return src ? (
-    <img src={src} alt={`Постер фильма «${movie.title}»`} draggable={false} />
+    <img
+      src={src}
+      alt={`Постер фильма «${movie.title}»`}
+      draggable={false}
+      onError={() => setSrc("")}
+    />
   ) : (
     <span className="poster-fallback" aria-label={`Постер фильма «${movie.title}»`}>
       <b>{movie.original.split(" ").slice(0, 2).map((word) => word[0]).join("")}</b>
