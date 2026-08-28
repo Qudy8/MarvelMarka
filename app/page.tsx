@@ -282,7 +282,7 @@ export default function Home() {
       hour: "2-digit",
       minute: "2-digit",
     }).format(new Date());
-    const text = `Начали смотреть ${movie.title} ${movie.year}г\n${copiedAt}\nhttps://www.twitch.tv/guacamolemolly`;
+    const text = `Начали смотреть "${movie.title}" ${movie.year}г\n${copiedAt}\nhttps://www.twitch.tv/guacamolemolly`;
     setCopyingMovie(movie.id);
 
     try {
