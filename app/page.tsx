@@ -121,7 +121,7 @@ function movieLink(movie: Movie) {
 }
 
 function posterLink(movie: Movie) {
-  return `https://st.kp.yandex.net/images/film_big/${SSPOISK_IDS[movie.id]}.jpg`;
+  return `/posters/${movie.id}.jpg`;
 }
 
 async function getHighQualityPoster(movie: Movie) {
