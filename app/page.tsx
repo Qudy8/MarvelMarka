@@ -463,10 +463,14 @@ export default function Home() {
                     disabled={copyingMovie === movie.id}
                     onClick={() => copyMovieAnnouncement(movie)}
                     aria-label={`Скопировать текст и постер фильма «${movie.title}»`}
+                    title={copyingMovie === movie.id ? "Готовим постер…" : "Скопировать текст и постер"}
                   >
-                    <i aria-hidden="true" />
-                    <b>{copyingMovie === movie.id ? "Готовим постер…" : "Копировать"}</b>
-                    <small aria-hidden="true">⌘C</small>
+                    <span className="copy-glyph" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <rect x="8" y="8" width="11" height="11" rx="2" />
+                        <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+                      </svg>
+                    </span>
                   </button>
                 </div>
               </article>
