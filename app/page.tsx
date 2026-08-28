@@ -120,6 +120,38 @@ function movieLink(movie: Movie) {
   return `https://www.sspoisk.ru/film/${SSPOISK_IDS[movie.id]}/`;
 }
 
+async function getHighQualityPoster(movie: Movie) {
+  const response = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(movie.wiki)}`);
+  if (!response.ok) throw new Error("Постер временно недоступен");
+  const data = await response.json();
+  const source = data?.originalimage?.source ?? data?.thumbnail?.source;
+  if (!source) throw new Error("У фильма не найден постер");
+  return String(source);
+}
+
+async function imageBlobToPng(blob: Blob) {
+  const bitmap = await createImageBitmap(blob);
+  const canvas = document.createElement("canvas");
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Не удалось подготовить постер");
+  context.drawImage(bitmap, 0, 0);
+  bitmap.close();
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((png) => png ? resolve(png) : reject(new Error("Не удалось преобразовать постер")), "image/png");
+  });
+}
+
+function blobToDataUrl(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Не удалось подготовить постер для буфера"));
+    reader.readAsDataURL(blob);
+  });
+}
+
 function Poster({ movie }: { movie: Movie }) {
   const [src, setSrc] = useState<string>("");
 
@@ -133,7 +165,7 @@ function Poster({ movie }: { movie: Movie }) {
     fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(movie.wiki)}`)
       .then((response) => response.ok ? response.json() : Promise.reject())
       .then((data) => {
-        const image = data?.thumbnail?.source ?? data?.originalimage?.source;
+        const image = data?.originalimage?.source ?? data?.thumbnail?.source;
         if (live && image) {
           setSrc(image);
           sessionStorage.setItem(`poster:${movie.id}`, image);
@@ -169,6 +201,7 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [helpOpen, setHelpOpen] = useState(false);
   const [toast, setToast] = useState("Карта готова к исследованию");
+  const [copyingMovie, setCopyingMovie] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -242,6 +275,42 @@ export default function Home() {
 
   const toggleWatched = (movieId: string) => {
     setWatched((current) => current.includes(movieId) ? current.filter((id) => id !== movieId) : [...current, movieId]);
+  };
+
+  const copyMovieAnnouncement = async (movie: Movie) => {
+    const copiedAt = new Intl.DateTimeFormat("ru-RU", {
+      dateStyle: "short",
+      timeStyle: "medium",
+    }).format(new Date());
+    const text = `Начали смотреть (${movie.title}: ${movie.year})\n${copiedAt}\nhttps://www.twitch.tv/guacamolemolly`;
+    setCopyingMovie(movie.id);
+
+    try {
+      if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
+        throw new Error("Браузер не поддерживает копирование изображений");
+      }
+      const posterUrl = await getHighQualityPoster(movie);
+      const posterResponse = await fetch(posterUrl);
+      if (!posterResponse.ok) throw new Error("Не удалось загрузить постер");
+      const png = await imageBlobToPng(await posterResponse.blob());
+      const posterDataUrl = await blobToDataUrl(png);
+      const html = `<div><p>${text.split("\n").map((line) => line.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")).join("<br>")}</p><img src="${posterDataUrl}" alt="Постер фильма ${movie.title}" style="max-width:720px;height:auto"></div>`;
+      await navigator.clipboard.write([new ClipboardItem({
+        "text/plain": new Blob([text], { type: "text/plain" }),
+        "text/html": new Blob([html], { type: "text/html" }),
+        "image/png": png,
+      })]);
+      setToast(`Текст и постер «${movie.title}» скопированы`);
+    } catch (error) {
+      try {
+        await navigator.clipboard.writeText(text);
+        setToast(`Текст скопирован, но постер недоступен: ${error instanceof Error ? error.message : "ошибка браузера"}`);
+      } catch {
+        setToast("Не удалось открыть буфер обмена. Разрешите сайту копирование в настройках браузера.");
+      }
+    } finally {
+      setCopyingMovie(null);
+    }
   };
 
   const focusPhase = (phase: PhaseId) => {
@@ -388,6 +457,17 @@ export default function Home() {
                   <span>{movie.year} · {phase.label}</span>
                   <h3>{movie.title}</h3>
                   <p>{movie.original}</p>
+                  <button
+                    className="copy-watch-button"
+                    type="button"
+                    disabled={copyingMovie === movie.id}
+                    onClick={() => copyMovieAnnouncement(movie)}
+                    aria-label={`Скопировать текст и постер фильма «${movie.title}»`}
+                  >
+                    <i aria-hidden="true" />
+                    <b>{copyingMovie === movie.id ? "Готовим постер…" : "Копировать"}</b>
+                    <small aria-hidden="true">⌘C</small>
+                  </button>
                 </div>
               </article>
             );
@@ -418,7 +498,7 @@ export default function Home() {
             <h2 id="help-title">Ваша карта киновселенной</h2>
             <div className="help-grid">
               <div><b>01</b><h3>Исследуйте</h3><p>Тяните пустое пространство, а колесом масштабируйте карту относительно курсора. Фазы идут слева направо.</p></div>
-              <div><b>02</b><h3>Отмечайте</h3><p>Используйте чекбокс на постере, чтобы вести личный список просмотренных фильмов.</p></div>
+              <div><b>02</b><h3>Готовьте эфир</h3><p>Кнопка «Копировать» забирает текст с текущим временем, Twitch-ссылку и постер фильма в хорошем качестве.</p></div>
               <div><b>03</b><h3>Открывайте</h3><p>Нажмите на постер — страница фильма на SSpoisk откроется в новой вкладке.</p></div>
             </div>
             <button className="primary-button" onClick={() => setHelpOpen(false)}>Начать путешествие</button>

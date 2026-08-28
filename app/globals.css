@@ -127,6 +127,13 @@ button { color: inherit; }
 .movie-copy span { color: var(--phase); font-weight: 700; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
 .movie-copy h3 { margin: 7px 0 4px; font-family: Oswald, Impact, sans-serif; font-size: 17px; line-height: 1.1; text-transform: uppercase; }
 .movie-copy p { margin: 0; color: #667083; font-size: 9px; line-height: 1.25; }
+.copy-watch-button { width: 172px; height: 31px; margin-top: 10px; padding: 0 8px; border: 1px solid rgba(255,255,255,.12); border-radius: 5px; display: grid; grid-template-columns: 8px 1fr auto; align-items: center; gap: 7px; background: linear-gradient(180deg, #191f2a, #11161f); color: #cfd6e2; cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,.25); transition: border-color .18s ease, color .18s ease, transform .18s ease, background .18s ease; }
+.copy-watch-button i { width: 6px; height: 6px; border-radius: 50%; background: var(--red); box-shadow: 0 0 9px rgba(238,39,55,.7); }
+.copy-watch-button b { overflow: hidden; font-size: 9px; font-weight: 800; letter-spacing: .09em; text-align: left; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.copy-watch-button small { padding-left: 7px; border-left: 1px solid rgba(255,255,255,.1); color: #687386; font-family: monospace; font-size: 8px; }
+.copy-watch-button:hover:not(:disabled) { border-color: color-mix(in srgb, var(--phase), white 15%); background: #202735; color: white; transform: translateY(-2px); }
+.copy-watch-button:focus-visible { outline: 2px solid white; outline-offset: 3px; }
+.copy-watch-button:disabled { cursor: wait; opacity: .65; }
 .watched-control { position: absolute; z-index: 6; right: 10px; top: 10px; width: 40px; height: 40px; display: grid; place-items: center; cursor: pointer; user-select: none; }
 .watched-control input { position: absolute; opacity: 0; pointer-events: none; }
 .watched-control i { width: 36px; height: 36px; display: grid; place-items: center; border: 2px solid rgba(255,255,255,.82); border-radius: 9px; background: rgba(8,11,17,.88); color: transparent; font-style: normal; font-size: 21px; font-weight: 900; box-shadow: 0 6px 20px rgba(0,0,0,.5); backdrop-filter: blur(8px); transition: transform .18s ease, background .18s ease, border-color .18s ease; }
